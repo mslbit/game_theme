@@ -1,0 +1,23 @@
+<?php
+/** @var $block LianLian\LLPay\Block\Jump */
+?>
+
+<?php
+if ($block->checkSign()) {
+    // phpcs:ignore Magento2.Functions.DiscouragedFunction
+    header("Location: " . $block->getCheckoutUrl());
+    return;
+}
+?>
+<h1><?= /** @noEscape  */ $block->error_msg ?></h1>
+<p>
+    <?=
+    $block->escapeHtml(
+        __('Your order number is: %1.', sprintf(
+            '<a href="%s" class="order-number"><strong>%s</strong></a>',
+            $block->getBaseUrl().'sales/order/view/order_id/'.$block->order_id,
+            $block->increment_id
+        )),
+        ['a', 'strong']
+    ) ?>
+</p>

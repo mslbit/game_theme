@@ -35,10 +35,10 @@ define([
         // 2. Handler & container resolution
         // ============================================================
         var OPTIONS_HANDLER_MAP = {
-            select:        window.attributeOption,
-            multiselect:   window.attributeOption,
-            swatch_visual: window.swatchVisualOption,
-            swatch_text:   window.swatchTextOption
+            select:        'attributeOption',
+            multiselect:   'attributeOption',
+            swatch_visual: 'swatchVisualOption',
+            swatch_text:   'swatchTextOption'
         };
 
         var OPTIONS_CONTAINER_MAP = {
@@ -49,7 +49,8 @@ define([
         };
 
         function getOptionsHandler(inputType) {
-            return OPTIONS_HANDLER_MAP[inputType] || null;
+            var key = OPTIONS_HANDLER_MAP[inputType];
+            return key ? window[key] : null;
         }
 
         function getOptionsContainer(inputType) {

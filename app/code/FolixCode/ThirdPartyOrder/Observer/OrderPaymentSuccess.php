@@ -45,7 +45,7 @@ class OrderPaymentSuccess implements ObserverInterface
         try {
             /** @var Order\Payment|null $payment */
             $payment = $observer->getEvent()->getData('payment');
-            
+            file_put_contents(BP.'/var/order.log','ttt',FILE_APPEND);
             if (!$payment || !$payment instanceof Order\Payment) {
                 return;
             }
@@ -144,8 +144,9 @@ class OrderPaymentSuccess implements ObserverInterface
      */
     private function isOrderPayed(Order $order): bool
     {
+           file_put_contents(BP.'/var/order.log',$order->getState(),FILE_APPEND);
         // 检查订单状态是否为已支付
-        if ($order->getState() === Order::STATE_PROCESSING) {
+        if ($order->getState() === Order::STATE_PROCESSING || $order->getState() === 'complete') {
             return true;
         }
         

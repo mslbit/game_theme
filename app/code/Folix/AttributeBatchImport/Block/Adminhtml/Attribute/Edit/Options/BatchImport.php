@@ -5,7 +5,7 @@ namespace Folix\AttributeBatchImport\Block\Adminhtml\Attribute\Edit\Options;
 
 use Magento\Backend\Block\Template;
 use Magento\Backend\Block\Template\Context;
-use Magento\Eav\Model\Entity\Attribute\Source\SpecificSourceInterface;
+
 
 /**
  * Renders the Batch Import section below Manage Options on the attribute edit form.

@@ -13,5 +13,33 @@
             "FOLIX_CUSTOMER_STATS_CUSTOMER_ID_CUSTOMER_ENTITY_ENTITY_ID": true,
             "FOLIX_CUSTOMER_STATS_UPDATED_AT": true
         }
+    },
+    "folix_customer_daily_stats": {
+        "column": {
+            "entity_id": true,
+            "customer_id": true,
+            "stat_date": true,
+            "orders_count": true,
+            "orders_amount": true,
+            "active_keys_count": true,
+            "direct_charges_count": true,
+            "created_at": true
+        },
+        "index": {
+            "FOLIX_CUSTOMER_DAILY_STATS_CUSTOMER_ID": true,
+            "FOLIX_CUSTOMER_DAILY_STATS_STAT_DATE": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "FOLIX_CUSTOMER_DAILY_STATS_CUSTOMER_ID_STAT_DATE": true,
+            "FOLIX_CUSTOMER_DAILY_STATS_CUSTOMER_ID_CUSTOMER_ENTITY_ENTITY_ID": true
+        }
+    },
+    "customer_entity": {
+        "column": {
+            "phone": true,
+            "city": true,
+            "country_id": true
+        }
     }
 }

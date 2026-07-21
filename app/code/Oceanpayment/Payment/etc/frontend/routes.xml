@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Oceanpayment Payment Module - Frontend Routes
+ *
+ * 注册前端路由器，将 oceanpayment 前缀映射到 Oceanpayment_Payment 模块。
+ * 路由规则：
+ * - oceanpayment/payment/back     → Controller/Payment/Back.php
+ *
+ * 发起支付使用 REST API 端点：POST /rest/V1/oceanpayment/place-pay
+ * 异步通知使用 REST API 端点：POST /rest/V1/oceanpayment/notice
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:App/etc/routes.xsd">
+    <router id="standard">
+        <route id="oceanpayment" frontName="oceanpayment">
+            <module name="Oceanpayment_Payment"/>
+        </route>
+    </router>
+</config>

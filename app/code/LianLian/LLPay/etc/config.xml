@@ -1,0 +1,35 @@
+<?xml version="1.0" ?>
+<!--
+/**
+ * AiDaYu
+ *
+ * NOTICE OF LICENSE
+ * https://www.lzyenjoy.cn
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade this extension to newer
+ * version in the future.
+ */
+ -->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <payment>
+            <llpay_custompaymentoption>
+                <active>1</active>
+                <model>LianLian\LLPay\Model\Checkout</model>
+                <title>Credit Card（连连支付）</title>
+                <redirect_url>llpay/index/jump</redirect_url>
+                <notification_url>rest/V1/update/status</notification_url>
+                <sandbox>1</sandbox>
+                <merchant_sandbox_id>0</merchant_sandbox_id>
+                <merchant_pro_id>0</merchant_pro_id>
+                <ll_pub_key>0</ll_pub_key>
+                <merchant_pri_key>0</merchant_pri_key>
+                <order_status>pending_payment</order_status>
+                <allowspecific>0</allowspecific>
+                <min_order_total>0.01</min_order_total>
+            </llpay_custompaymentoption>
+        </payment>
+    </default>
+</config>

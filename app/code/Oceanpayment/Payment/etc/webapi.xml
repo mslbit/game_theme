@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Oceanpayment Payment Module - Web API Configuration
+ *
+ * 定义 Oceanpayment REST API 端点：
+ * 1. 异步通知（noticeUrl）— Oceanpayment 服务端推送支付结果
+ * 2. 发起支付（place-pay）— 前端一步完成 placeOrder + 获取 pay_url
+ * 3. 访客发起支付（guest-place-pay）— 访客用户的一步支付
+ */
+-->
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Webapi:etc/webapi.xsd">
+
+    <!--
+        Oceanpayment 异步通知端点
+        路由：POST /rest/V1/oceanpayment/notice
+        处理器：Oceanpayment\Payment\Api\NotificationInterface::handle()
+        权限：anonymous（Oceanpayment 服务端无 Magento 认证）
+    -->
+    <route url="/V1/oceanpayment/notice" method="POST">
+        <service class="Oceanpayment\Payment\Api\NotificationInterface" method="handle"/>
+        <resources>
+            <resource ref="anonymous"/>
+        </resources>
+    </route>
+
+    <!--
+        Oceanpayment 发起支付端点（登录用户）
+        路由：POST /rest/V1/oceanpayment/place-pay
+        处理器：Oceanpayment\Payment\Api\PlacePayInterface::placePay()
+        权限：self（需要登录用户的 Magento Token）
+        内部调用 savePaymentInformationAndPlaceOrder + 返回 pay_url
+    -->
+    <route url="/V1/oceanpayment/place-pay" method="POST">
+        <service class="Oceanpayment\Payment\Api\PlacePayInterface" method="placePay"/>
+        <resources>
+            <resource ref="self"/>
+        </resources>
+        <data>
+            <parameter name="cartId" force="true">%cart_id%</parameter>
+        </data>
+    </route>
+
+    <!--
+        Oceanpayment 发起支付端点（访客用户）
+        路由：POST /rest/V1/guest-oceanpayment/:cartId/place-pay
+        处理器：Oceanpayment\Payment\Api\PlacePayInterface::guestPlacePay()
+        权限：anonymous（访客无需认证）
+    -->
+    <route url="/V1/guest-oceanpayment/:cartId/place-pay" method="POST">
+        <service class="Oceanpayment\Payment\Api\PlacePayInterface" method="guestPlacePay"/>
+        <resources>
+            <resource ref="anonymous"/>
+        </resources>
+    </route>
+</routes>

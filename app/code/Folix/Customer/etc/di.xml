@@ -16,4 +16,9 @@
             <argument name="customerStatsRepository" xsi:type="object">Folix\Customer\Api\CustomerStatsRepositoryInterface</argument>
         </arguments>
     </type>
+
+    <!-- 读取客户扩展属性（phone, city, country_id） -->
+    <type name="Magento\Customer\Api\CustomerRepositoryInterface">
+        <plugin name="Folix_Customer::load_extension_attributes" type="Folix\Customer\Plugin\CustomerExtensionAttributesPlugin"/>
+    </type>
 </config>

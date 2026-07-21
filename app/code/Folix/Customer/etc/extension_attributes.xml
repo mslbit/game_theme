@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Folix Customer Module - Extension Attributes
+ *
+ * 声明 customer_entity 表扩展字段为 Customer 扩展属性，
+ * 使 CustomerRepository::save 能正确持久化 phone/city/country_id
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Api/etc/extension_attributes.xsd">
+    <extension_attributes for="Magento\Customer\Api\Data\CustomerInterface">
+        <attribute code="phone" type="string"/>
+        <attribute code="city" type="string"/>
+        <attribute code="country_id" type="string"/>
+    </extension_attributes>
+</config>

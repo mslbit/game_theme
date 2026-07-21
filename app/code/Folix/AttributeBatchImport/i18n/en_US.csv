@@ -1,0 +1,6 @@
+"Batch Import Options","Batch Import Options"
+"One option per line. Use comma to set values per store view.","One option per line. Use comma to set values per store view."
+" — Admin (Store 0) value"," — Admin (Store 0) value"
+" — Value for a specific store view"," — Value for a specific store view"
+" — Multiple stores in one option"," — Multiple stores in one option"
+"Add to Table","Add to Table"

@@ -1,15 +1,36 @@
 {
-    "name": "folix/module-attribute-batch-import",
+    "name": "folix/module-attr-batch",
     "description": "Batch import product attribute options via textarea on the attribute edit page.",
     "type": "magento2-module",
     "version": "1.0.0",
     "license": "MIT",
-    "require": {
-        "php": ">=7.4",
-        "magento/framework": "*",
-        "magento/module-catalog": "*",
-        "magento/module-eav": "*"
+    "keywords": [
+        "magento2",
+        "magento",
+        "attribute",
+        "batch-import",
+        "options",
+        "swatches"
+    ],
+    "authors": [
+        {
+            "name": "Folix",
+            "email": "dev@mslbit.com"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/mslbit/module-attr-batch/issues",
+        "source": "https://github.com/mslbit/module-attr-batch"
     },
+    "require": {
+        "php": ">=8.1",
+        "magento/framework": "^102.0 || ^103.0",
+        "magento/module-catalog": "^103.0 || ^104.0",
+        "magento/module-eav": "^102.0 || ^103.0",
+        "magento/module-swatches": "^102.0 || ^103.0"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
     "autoload": {
         "files": [
             "registration.php"

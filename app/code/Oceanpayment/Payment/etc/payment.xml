@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<payment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Payment:etc/payment.xsd">
+    <groups>
+        <group id="oceanpayment">
+            <label>Oceanpayment</label>
+        </group>
+    </groups>
+    <methods>
+        <method name="oceanpayment_creditcard"/>
+        <method name="oceanpayment_applepay"/>
+        <method name="oceanpayment_googlepay"/>
+        <method name="oceanpayment_wechatpay"/>
+        <method name="oceanpayment_alipay"/>
+
+    </methods>
+</payment>
