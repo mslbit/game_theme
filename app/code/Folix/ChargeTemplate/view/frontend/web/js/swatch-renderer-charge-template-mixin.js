@@ -161,8 +161,7 @@ define([
                 // PC Desktop: first attribute → overflow pills + tag + more dropdown
                 // ================================================
                 if (isFirstAttribute && window.matchMedia(DESKTOP_MQ).matches) {
-                    var visiblePills = '',
-                        overflowPills = '';
+                    var visiblePills = '';
 
                     $.each(config.options, function (index) {
                         if (!optionConfig.hasOwnProperty(this.id)) { return; }
@@ -170,11 +169,7 @@ define([
                         var attr = htmlBuilder.buildOptionAttr(this, optionConfig, sizeConfig, controlId, index),
                             pillHtml = htmlBuilder.buildPill(optionClass, attr, this.label);
 
-                        if (countAttributes < PILLS_MAX_VISIBLE) {
-                            visiblePills += pillHtml;
-                        } else {
-                            overflowPills += pillHtml;
-                        }
+                        visiblePills += pillHtml;
                         countAttributes++;
                     });
 
@@ -185,18 +180,7 @@ define([
                                 '<span class="pdp-tag-group__close">&times;</span>' +
                             '</div>' +
                             '<div class="pdp-pills-row__visible">' + visiblePills + '</div>' +
-                            (overflowPills ?
-                                '<div class="pdp-swatch-more-wrapper">' +
-                                    '<div class="pdp-swatch-more__trigger"><span class="pdp-swatch-more__text">More</span><span class="pdp-swatch-more__arrow">&#9660;</span></div>' +
-                                '</div>' : '') +
                         '</div>' +
-                        (overflowPills ?
-                            '<div class="pdp-swatch-more__panel" style="display:none">' +
-                                '<div class="pdp-swatch-more__search">' +
-                                    '<input type="text" class="pdp-swatch-more__search-input" placeholder="Search...">' +
-                                '</div>' +
-                                '<div class="pdp-swatch-more__list">' + overflowPills + '</div>' +
-                            '</div>' : '') +
                         '</div>';
 
                     return html;

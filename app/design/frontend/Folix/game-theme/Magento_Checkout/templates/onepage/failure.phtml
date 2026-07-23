@@ -1,0 +1,192 @@
+<?php
+/**
+ * Oceanpayment Payment Failure Page
+ *
+ * @var \Magento\Framework\Escaper $escaper
+ * @var \Magento\Checkout\Block\Onepage\Failure $block
+ */
+?>
+<div class="checkout-failure">
+    <div class="failure-card">
+        <div class="failure-header">
+            <div class="failure-icon">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+            </div>
+            <h1 class="failure-title"><?= $escaper->escapeHtml(__('Payment Failed')) ?></h1>
+            <p class="failure-subtitle"><?= $escaper->escapeHtml(__('Your payment was not successful. Please try again.')) ?></p>
+        </div>
+
+        <?php if ($block->getRealOrderId()) : ?>
+            <div class="order-info">
+                <div class="order-info-row">
+                    <span class="order-info-label"><?= $escaper->escapeHtml(__('Order Number')) ?></span>
+                    <span class="order-info-value order-number">#<?= $escaper->escapeHtml($block->getRealOrderId()) ?></span>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($error = $block->getErrorMessage()) : ?>
+            <div class="failure-reason">
+                <div class="failure-reason-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                    </svg>
+                </div>
+                <div class="failure-reason-text"><?= $escaper->escapeHtml($error) ?></div>
+            </div>
+        <?php endif; ?>
+
+        <div class="failure-actions">
+            <a href="<?= $escaper->escapeUrl($block->getUrl('checkout/cart')) ?>" class="action primary retry-btn">
+                <?= $escaper->escapeHtml(__('Try Again')) ?>
+            </a>
+            <a href="<?= $escaper->escapeUrl($block->getUrl('help-center')) ?>" class="action secondary support-btn">
+                <?= $escaper->escapeHtml(__('Contact Support')) ?>
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.checkout-failure {
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+    min-height: 60vh;
+    align-items: flex-start;
+}
+
+.failure-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+    padding: 48px 40px;
+    max-width: 520px;
+    width: 100%;
+    text-align: center;
+}
+
+.failure-header {
+    margin-bottom: 32px;
+}
+
+.failure-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px;
+    background: #fee2e2;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.failure-icon svg {
+    width: 36px;
+    height: 36px;
+    fill: #dc2626;
+}
+
+.failure-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 0 8px;
+}
+
+.failure-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.order-info {
+    background: #f9fafb;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+}
+
+.order-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.order-info-label {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.order-info-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.failure-reason {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 28px;
+    text-align: left;
+}
+
+.failure-reason-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: #dc2626;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.failure-reason-text {
+    font-size: 13px;
+    color: #991b1b;
+    line-height: 1.5;
+}
+
+.failure-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.failure-actions .retry-btn {
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 32px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.failure-actions .retry-btn:hover {
+    background: #333;
+}
+
+.failure-actions .support-btn {
+    background: #fff;
+    color: #1a1a1a;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: border-color 0.2s;
+}
+
+.failure-actions .support-btn:hover {
+    border-color: #9ca3af;
+}
+</style>

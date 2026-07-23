@@ -3,14 +3,14 @@
         xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
     
     <!-- 监听订单支付成功事件 -->
-    <event name="sales_order_payment_place_end">
+     <event name="sales_order_payment_place_end">
         <observer name="folixcode_thirdpartyorder_order_payment_success" 
                   instance="FolixCode\ThirdPartyOrder\Observer\OrderPaymentSuccess" />
-    </event>
-     <event name="oceanpayment_callback_after">
+    </event> 
+      <event name="oceanpayment_callback_after">
         <observer name="folixcode_thirdpartyorder_oceanpayment_callback_after_payment_success" 
                   instance="FolixCode\ThirdPartyOrder\Observer\OrderPaymentSuccess" />
-    </event>
+    </event> 
      <event name="llpay_callback_after">
         <observer name="folixcode_thirdpartyorder_llpay_callback_after" 
                   instance="FolixCode\ThirdPartyOrder\Observer\OrderPaymentSuccess" />

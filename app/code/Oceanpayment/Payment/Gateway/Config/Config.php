@@ -176,6 +176,16 @@ class Config extends GatewayConfig
     }
 
     /**
+     * 判断是否为嵌入式支付模式
+     *
+     * @return bool
+     */
+    public function isEmbedded(): bool
+    {
+        return $this->getMode() === Mode::MODE_EMBEDDED;
+    }
+
+    /**
      * 获取支付方式对应的 Oceanpayment 交易方法标识
      *
      * 例如 Credit Card、ApplePay、WechatPay_Web 等

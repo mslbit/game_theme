@@ -46,4 +46,5 @@ interface PlacePayInterface
         \Magento\Quote\Api\Data\PaymentInterface $paymentMethod,
         ?\Magento\Quote\Api\Data\AddressInterface $billingAddress = null
     ): string;
+
 }

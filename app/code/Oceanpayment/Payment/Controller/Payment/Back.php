@@ -8,6 +8,7 @@ use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Framework\App\Action\Action;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\App\Action\HttpPostActionInterface;
+use Magento\Framework\App\CacheInterface;
 use Magento\Framework\App\CsrfAwareActionInterface;
 use Magento\Framework\App\Request\InvalidRequestException;
 use Magento\Framework\App\RequestInterface;
@@ -16,6 +17,7 @@ use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Message\ManagerInterface as MessageManager;
 use Magento\Sales\Api\Data\OrderInterface;
 use Oceanpayment\Payment\Gateway\Callback\CallbackProcessor;
+use Psr\Log\LoggerInterface;
 
 /**
  * Oceanpayment 同步回调控制器（backUrl）
@@ -49,13 +51,25 @@ class Back extends Action implements HttpPostActionInterface, CsrfAwareActionInt
     private CustomerSession $customerSession;
 
     /**
+     * @var CacheInterface
+     */
+    private CacheInterface $cache;
+
+    /**
+     * @var LoggerInterface
+     */
+    private LoggerInterface $logger;
+
+    private const CACHE_LOGIN_PREFIX = 'oceanpayment_login_';
+
+    /**
      * Oceanpayment 回调可能包含的参数键名
      */
     private const CALLBACK_PARAM_KEYS = [
         'account', 'terminal', 'signValue', 'backUrl',
         'order_number', 'order_currency', 'order_amount', 'order_notes',
         'card_number', 'payment_id', 'payment_authType', 'payment_status',
-        'payment_details', 'payment_risk', 'methods',
+        'payment_details', 'payment_risk', 'payment_solutions', 'methods',
         'billing_firstName', 'billing_lastName', 'billing_email',
         'billing_phone', 'billing_country', 'billing_state',
         'billing_city', 'billing_address', 'billing_zip',
@@ -68,17 +82,23 @@ class Back extends Action implements HttpPostActionInterface, CsrfAwareActionInt
      * @param CallbackProcessor $callbackProcessor
      * @param CheckoutSession $checkoutSession
      * @param CustomerSession $customerSession
+     * @param CacheInterface $cache
+     * @param LoggerInterface $logger
      */
     public function __construct(
         Context $context,
         CallbackProcessor $callbackProcessor,
         CheckoutSession $checkoutSession,
-        CustomerSession $customerSession
+        CustomerSession $customerSession,
+        CacheInterface $cache,
+        LoggerInterface $logger
     ) {
         parent::__construct($context);
         $this->callbackProcessor = $callbackProcessor;
         $this->checkoutSession = $checkoutSession;
         $this->customerSession = $customerSession;
+        $this->cache = $cache;
+        $this->logger = $logger;
     }
 
     /**
@@ -88,6 +108,9 @@ class Back extends Action implements HttpPostActionInterface, CsrfAwareActionInt
      */
     public function execute(): ResultInterface
     {
+        // 3D 验证跨站 POST 回来时 session 丢失，先从 cache+cookie 恢复登录
+        $this->restoreLoginState();
+
         try {
             $params = $this->collectCallbackParams();
 
@@ -119,6 +142,7 @@ class Back extends Action implements HttpPostActionInterface, CsrfAwareActionInt
             return $this->redirectByPaymentStatus($order, $paymentStatus);
 
         } catch (\Exception $e) {
+            var_dump($e->getTraceAsString());
             $this->messageManager->addErrorMessage(__('An error occurred while processing your payment.'));
             return $this->redirectToFailure();
         }
@@ -180,8 +204,25 @@ class Back extends Action implements HttpPostActionInterface, CsrfAwareActionInt
         }
 
         if ($paymentStatus === CallbackProcessor::PAYMENT_STATUS_FAILED) {
+            // 设置 checkout session 数据，failure 页面依赖 lastQuoteId + lastOrderId
+            $this->checkoutSession->setLastQuoteId($order->getQuoteId());
+            $this->checkoutSession->setLastOrderId($order->getEntityId());
+            $this->checkoutSession->setLastRealOrderId($order->getIncrementId());
+            $this->checkoutSession->setLastSuccessQuoteId($order->getQuoteId());
             $this->checkoutSession->restoreQuote();
-            $this->messageManager->addErrorMessage(__('Your payment was declined. Please try again.'));
+
+            $solutions = $params['payment_solutions'] ?? '';
+            $details = $params['payment_details'] ?? '';
+            $failMsg = __('Your payment was declined.');
+            if ($solutions) {
+                $failMsg = __('Your payment was declined. %1', $solutions);
+            }
+            if ($details) {
+                $failMsg = __('Your payment was declined. %1 (%2)', $solutions ?: __('Failed'), $details);
+            }
+            // 设置 errorMessage 供 failure 页面 Block 读取
+            $this->checkoutSession->setErrorMessage((string) $failMsg);
+            $this->messageManager->addErrorMessage($failMsg);
             return $this->redirectToFailure();
         }
 
@@ -209,9 +250,49 @@ class Back extends Action implements HttpPostActionInterface, CsrfAwareActionInt
         $this->checkoutSession->setLastRealOrderId($order->getIncrementId());
         $this->checkoutSession->setLastQuoteId($order->getQuoteId());
 
-        /* 恢复客户登录状态：外部跳回时 customer session 可能丢失 */
+        /* 恢复客户登录状态：3D 验证跨站 POST 回来时 session cookie 不携带 */
         if ($order->getCustomerId() && !$this->customerSession->isLoggedIn()) {
-            $this->customerSession->setCustomerDataById($order->getCustomerId());
+            $this->customerSession->loginById($order->getCustomerId());
+        }
+    }
+
+    /**
+     * 从 cache 恢复登录状态
+     *
+     * 3D 验证跨站 POST 回来时 session 完全重建，登录态丢失。
+     * 从 POST 参数拿到 order_number，查 cache 获取 customer_id，loginById() 恢复。
+     */
+    private function restoreLoginState(): void
+    {
+        try {
+            if ($this->customerSession->isLoggedIn()) {
+                return;
+            }
+
+            $orderNumber = $this->getRequest()->getParam('order_number', '');
+            if (empty($orderNumber)) {
+                return;
+            }
+
+            $cacheKey = self::CACHE_LOGIN_PREFIX . $orderNumber;
+            $customerId = $this->cache->load($cacheKey);
+
+            if (empty($customerId)) {
+                return;
+            }
+
+            $this->customerSession->loginById((int) $customerId);
+            $this->cache->remove($cacheKey);
+
+            $this->logger->info('[Oceanpayment] Login state restored from cache', [
+                'order_number' => $orderNumber,
+                'customer_id'  => $customerId,
+            ]);
+
+        } catch (\Exception $e) {
+            $this->logger->error('[Oceanpayment] Failed to restore login state: {message}', [
+                'message' => $e->getMessage(),
+            ]);
         }
     }
 

@@ -1,0 +1,77 @@
+<!--
+/**
+ * Oceanpayment 嵌入式信用卡支付模板
+ *
+ * 包含 Oceanpayment iframe 容器和 Place Order 按钮。
+ * 按钮绑定 pay() 方法，触发 pre-order → iframe 支付流程。
+ */
+-->
+<div class="payment-method" data-bind="css: {'_active': (getCode() == isChecked())}, afterRender: opinputInit">
+    <div class="payment-method-title field choice">
+        <input type="radio"
+               name="payment[method]"
+               class="radio"
+               data-bind="attr: {'id': getCode()}, value: getCode(), checked: isChecked, click: selectPaymentMethod, visible: isRadioButtonVisible()"/>
+        <label data-bind="attr: {'for': getCode()}" class="label">
+            <span data-bind="text: getTitle()"></span>
+            <span class="payment-card-logos">
+                <img data-bind="attr: {src: require.toUrl('Oceanpayment_Payment/images/VISA.svg'), alt: 'VISA'}" class="card-logo" />
+                <img data-bind="attr: {src: require.toUrl('Oceanpayment_Payment/images/Mastercard.svg'), alt: 'Mastercard'}" class="card-logo" />
+                <img data-bind="attr: {src: require.toUrl('Oceanpayment_Payment/images/American.svg'), alt: 'American Express'}" class="card-logo" />
+                <img data-bind="attr: {src: require.toUrl('Oceanpayment_Payment/images/JCB.svg'), alt: 'JCB'}" class="card-logo" />
+            </span>
+        </label>
+    </div>
+    <div class="payment-method-content">
+    
+        <!-- ko foreach: getRegion('messages') -->
+        <!-- ko template: getTemplate() --><!-- /ko -->
+        <!--/ko-->
+        <div class="payment-method-billing-address">
+            <!-- ko foreach: $parent.getRegion(getBillingAddressFormName()) -->
+            <!-- ko template: getTemplate() --><!-- /ko -->
+            <!--/ko-->
+        </div>
+
+        <fieldset>
+            <div id="oceanpayment-element"></div>
+        </fieldset>
+
+        <div class="checkout-agreements-block">
+            <!-- ko foreach: $parent.getRegion('before-place-order') -->
+                <!-- ko template: getTemplate() --><!-- /ko -->
+            <!--/ko-->
+        </div>
+        
+        <div class="actions-toolbar">
+            <div class="primary">
+                <button class="action primary checkout"
+                        type="submit"
+                        data-bind="
+                            click: placeOrder,
+                            attr: {title: $t('Place Order')},
+                            css: {disabled: !isPlaceOrderActionAllowed()},
+                            enable: isPlaceOrderActionAllowed()"
+                        disabled>
+                    <span data-bind="i18n: 'Place Order'"></span>
+                </button>
+            </div>
+        </div>
+         
+    </div>
+</div>
+
+<style>
+.payment-card-logos {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 10px;
+    vertical-align: middle;
+}
+.payment-card-logos .card-logo {
+    height: 20px;
+    width: auto;
+    vertical-align: middle;
+}
+</style>

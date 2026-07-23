@@ -95,6 +95,20 @@ class SignatureHelper
     }
 
     /**
+     * 构建嵌入式支付返回 URL（结账页）
+     *
+     * 3D 验证完成后跳回结账页，前端据此判断支付结果
+     * 格式：https://www.example.com/checkout/index/index
+     *
+     * @return string
+     */
+    public function buildCheckoutBackUrl(): string
+    {
+        $baseUrl = $this->storeManager->getStore()->getBaseUrl();
+        return rtrim($baseUrl, '/') . '/checkout/index/index';
+    }
+
+    /**
      * 构建异步通知 URL
      *
      * Oceanpayment 服务端推送支付结果的 REST API 回调地址

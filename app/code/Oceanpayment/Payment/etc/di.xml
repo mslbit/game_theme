@@ -334,11 +334,12 @@
          每个命令池注册 "initialize" 和 "refund" 命令
          ======================================================================== -->
 
-    <!-- Credit Card 命令池 -->
+    <!-- Credit Card 命令池（嵌入式模式：sale 代替 initialize + capture） -->
     <virtualType name="OPCreditCardCommandPool" type="Magento\Payment\Gateway\Command\CommandPool">
         <arguments>
             <argument name="commands" xsi:type="array">
-                <item name="initialize" xsi:type="string">OPCreditCardInitializeCommand</item>
+                <item name="authorize" xsi:type="string">Magento\Payment\Gateway\Command\NullCommand</item>
+                 <item name="capture" xsi:type="string">Magento\Payment\Gateway\Command\NullCommand</item>
                 <item name="refund" xsi:type="string">OPRefundCommand</item>
             </argument>
         </arguments>
@@ -349,6 +350,7 @@
         <arguments>
             <argument name="commands" xsi:type="array">
                 <item name="initialize" xsi:type="string">OPApplePayInitializeCommand</item>
+                <item name="capture" xsi:type="string">Oceanpayment\Payment\Gateway\Command\SaleCommand</item>
                 <item name="refund" xsi:type="string">OPRefundCommand</item>
             </argument>
         </arguments>
@@ -359,6 +361,7 @@
         <arguments>
             <argument name="commands" xsi:type="array">
                 <item name="initialize" xsi:type="string">OPGooglePayInitializeCommand</item>
+                <item name="capture" xsi:type="string">Oceanpayment\Payment\Gateway\Command\SaleCommand</item>
                 <item name="refund" xsi:type="string">OPRefundCommand</item>
             </argument>
         </arguments>
@@ -369,6 +372,7 @@
         <arguments>
             <argument name="commands" xsi:type="array">
                 <item name="initialize" xsi:type="string">OPWechatPayInitializeCommand</item>
+                <item name="capture" xsi:type="string">Oceanpayment\Payment\Gateway\Command\SaleCommand</item>
                 <item name="refund" xsi:type="string">OPRefundCommand</item>
             </argument>
         </arguments>
@@ -379,6 +383,7 @@
         <arguments>
             <argument name="commands" xsi:type="array">
                 <item name="initialize" xsi:type="string">OPAlipayInitializeCommand</item>
+                <item name="capture" xsi:type="string">Oceanpayment\Payment\Gateway\Command\SaleCommand</item>
                 <item name="refund" xsi:type="string">OPRefundCommand</item>
             </argument>
         </arguments>
@@ -476,5 +481,8 @@
 
     <preference for="Oceanpayment\Payment\Api\PlacePayInterface"
                 type="Oceanpayment\Payment\Model\PlacePay" />
+
+    <preference for="Oceanpayment\Payment\Api\PreOrderInterface"
+                type="Oceanpayment\Payment\Model\PreOrder" />
 
 </config>

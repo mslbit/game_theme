@@ -1,11 +1,9 @@
 /**
  * Oceanpayment 支付方式注册组件
  *
- * 将5种 Oceanpayment 支付方式注册到 Magento Checkout 的渲染器列表中，
- * 全部使用 op-renderer 通用渲染器。
- *
- * 两种托管结账模式（merchant_controlled / auto_redirect）共享同一套支付方式，
- * mode 仅影响跳转方式（由 op-renderer.js 处理），不影响支付方式注册。
+ * 将5种 Oceanpayment 支付方式注册到 Magento Checkout 的渲染器列表中。
+ * Credit Card 在嵌入式模式下使用专用渲染器（credit-card-embedded-render），
+ * 其他支付方式及 Credit Card 托管模式使用通用渲染器（op-renderer）。
  */
 define(
     [
@@ -18,28 +16,33 @@ define(
     ) {
         'use strict';
 
-        var component = 'Oceanpayment_Payment/js/view/payment/method-renderer/op-renderer';
+        var defaultComponent = 'Oceanpayment_Payment/js/view/payment/method-renderer/op-renderer';
+        var embeddedComponent = 'Oceanpayment_Payment/js/view/payment/method-renderer/credit-card-embedded-render';
+
+        // 嵌入式模式：Credit Card 使用专用渲染器
+        var isEmbedded = window.checkoutConfig.payment.oceanpayment_payment
+            && window.checkoutConfig.payment.oceanpayment_payment.mode === 'embedded';
 
         rendererList.push(
             {
                 type: 'oceanpayment_creditcard',
-                component: component
+                component: isEmbedded ? embeddedComponent : defaultComponent
             },
             {
                 type: 'oceanpayment_applepay',
-                component: component
+                component: defaultComponent
             },
             {
                 type: 'oceanpayment_googlepay',
-                component: component
+                component: defaultComponent
             },
             {
                 type: 'oceanpayment_wechatpay',
-                component: component
+                component: defaultComponent
             },
             {
                 type: 'oceanpayment_alipay',
-                component: component
+                component: defaultComponent
             }
         );
 

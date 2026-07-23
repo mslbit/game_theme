@@ -78,7 +78,7 @@ class CallbackProcessor
      * 已处理的订单状态列表
      */
     private const PROCESSED_STATES = [
-        Order::STATE_PROCESSING,
+       // Order::STATE_PROCESSING,
         Order::STATE_COMPLETE,
     ];
 
@@ -249,13 +249,14 @@ class CallbackProcessor
     {
         $paymentStatus = (int) ($params['payment_status'] ?? self::PAYMENT_STATUS_PENDING);
         $payment = $order->getPayment();
-
+        file_put_contents(BP.'/var/testf.log',$paymentStatus."\n",FILE_APPEND);
         switch ($paymentStatus) {
             case self::PAYMENT_STATUS_SUCCESS:
                 $this->processPaymentSuccess($order, $payment, $params, $source);
                 break;
 
             case self::PAYMENT_STATUS_FAILED:
+                 file_put_contents(BP.'/var/testf.log','FAL'."\n",FILE_APPEND);
                 $this->processPaymentFailure($order, $payment, $params, $source);
                 break;
 
@@ -271,16 +272,10 @@ class CallbackProcessor
 
         $this->addPaymentComment($order, $params, $paymentStatus, $source);
 
-        /* 分发回调事件，供其他模块通过观察者模式监听 */
-        $this->eventManager->dispatch('oceanpayment_callback_after', [
-            'payment'        => $payment,
-            'order'          => $order,
-            'payment_status' => $paymentStatus,
-            'callback_params' => $params,
-            'source'         => $source,
-        ]);
-
+       
         $this->orderRepository->save($order);
+        
+      
     }
 
     /**
@@ -363,26 +358,30 @@ class CallbackProcessor
      */
     private function processPaymentSuccess(OrderInterface $order, $payment, array $params, string $source): void
     {
-        $order->setState(Order::STATE_PROCESSING);
-        $order->setStatus(Order::STATE_PROCESSING);
-
         $paymentId = $params['payment_id'] ?? '';
         if (!empty($paymentId)) {
             $payment->setTransactionId($paymentId);
             $payment->setLastTransId($paymentId);
-            $payment->addTransaction(PaymentTransaction::TYPE_CAPTURE);
         }
 
         $payment->setAdditionalInformation('oceanpayment_payment_id', $paymentId);
         $payment->setAdditionalInformation('oceanpayment_card_number', $params['card_number'] ?? '');
         $payment->setAdditionalInformation('oceanpayment_auth_type', $params['payment_authType'] ?? '');
 
+        $payment->registerCaptureNotification($order->getTotalDue());
+
         $this->sendOrderEmail($order);
-        $this->createInvoice($order);
 
         $this->logger->info('[Oceanpayment] [{source}] Order #{incrementId} payment SUCCESS', [
             'source' => $source,
             'incrementId' => $order->getIncrementId(),
+        ]);
+     
+           /* 分发回调事件，供其他模块通过观察者模式监听 */
+        $this->eventManager->dispatch('oceanpayment_callback_after', [
+            'payment'        => $order->getPayment(),
+            'order'          => $order,
+            'callback_params' => $params,
         ]);
     }
 
@@ -516,8 +515,17 @@ class CallbackProcessor
                 return;
             }
 
+            $payment = $order->getPayment();
+            if (!$payment || !$payment->getTransactionId()) {
+                $this->logger->error('[Oceanpayment] Cannot create invoice - payment transaction ID is missing', [
+                    'incrementId' => $order->getIncrementId(),
+                ]);
+                return;
+            }
+
             $invoice = $this->invoiceService->prepareInvoice($order);
-            $invoice->setRequestedCaptureCase(\Magento\Sales\Model\Order\Invoice::CAPTURE_OFFLINE);
+            $invoice->setRequestedCaptureCase(\Magento\Sales\Model\Order\Invoice::CAPTURE_ONLINE);
+            $invoice->setTransactionId($payment->getTransactionId());
             $invoice->register();
 
             $invoice->getOrder()->setIsInProcess(true);
@@ -568,6 +576,11 @@ class CallbackProcessor
             $params['payment_authType'] ?? 'N/A',
             $params['payment_details'] ?? 'N/A'
         );
+
+        // 失败时附加 payment_solutions（Oceanpayment 返回的解决建议）
+        if ($paymentStatus === self::PAYMENT_STATUS_FAILED && !empty($params['payment_solutions'])) {
+            $comment .= ' | Solutions: ' . $params['payment_solutions'];
+        }
 
         $order->addCommentToStatusHistory($comment);
     }

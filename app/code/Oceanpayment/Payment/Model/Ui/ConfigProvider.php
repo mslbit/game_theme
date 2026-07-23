@@ -6,6 +6,7 @@ namespace Oceanpayment\Payment\Model\Ui;
 use Magento\Checkout\Model\ConfigProviderInterface;
 use Magento\Framework\View\Asset\Repository as AssetRepository;
 use Oceanpayment\Payment\Gateway\Config\Config;
+use Oceanpayment\Payment\Gateway\Helper\SignatureHelper;
 
 /**
  * Oceanpayment 结账配置提供器
@@ -98,6 +99,11 @@ class ConfigProvider implements ConfigProviderInterface
     private AssetRepository $assetRepository;
 
     /**
+     * @var SignatureHelper
+     */
+    private SignatureHelper $signatureHelper;
+
+    /**
      * Constructor
      *
      * @param Config $creditCardConfig Credit Card 配置（OPCreditCardConfig 虚拟类型）
@@ -106,6 +112,7 @@ class ConfigProvider implements ConfigProviderInterface
      * @param Config $wechatPayConfig WeChat Pay 配置（OPWechatPayConfig 虚拟类型）
      * @param Config $alipayConfig Alipay 配置（OPAlipayConfig 虚拟类型）
      * @param AssetRepository $assetRepository 静态资源仓库
+     * @param SignatureHelper $signatureHelper 签名与 URL 辅助
      */
     public function __construct(
         Config $creditCardConfig,
@@ -113,7 +120,8 @@ class ConfigProvider implements ConfigProviderInterface
         Config $googlePayConfig,
         Config $wechatPayConfig,
         Config $alipayConfig,
-        AssetRepository $assetRepository
+        AssetRepository $assetRepository,
+        SignatureHelper $signatureHelper
     ) {
         $this->creditCardConfig = $creditCardConfig;
         $this->applePayConfig = $applePayConfig;
@@ -121,6 +129,7 @@ class ConfigProvider implements ConfigProviderInterface
         $this->wechatPayConfig = $wechatPayConfig;
         $this->alipayConfig = $alipayConfig;
         $this->assetRepository = $assetRepository;
+        $this->signatureHelper = $signatureHelper;
     }
 
     /**
@@ -139,7 +148,11 @@ class ConfigProvider implements ConfigProviderInterface
             'payment' => [
                 self::CODE => [
                     'mode' => $mode,
+                    'is_production'   => 
+                    $this->creditCardConfig->getEnvironment() 
+                    === \Oceanpayment\Payment\Model\Config\Source\Environment::PRODUCTION ,
                     'methods' => [],
+                    'embedded' => $this->getEmbeddedConfig(),
                 ],
             ],
         ];
@@ -163,6 +176,8 @@ class ConfigProvider implements ConfigProviderInterface
 
         return $config;
     }
+
+
 
     /**
      * 获取所有支付方式的配置实例映射
@@ -203,8 +218,25 @@ class ConfigProvider implements ConfigProviderInterface
     }
 
     /**
-     * 获取支付方式 Logo URL
+     * 获取嵌入式支付配置
      *
+     * 供前端 Oceanpayment.init() 初始化 iframe 时使用
+     *
+     * @return array
+     */
+    private function getEmbeddedConfig(): array
+    {
+        return [
+            'is_sandbox' => $this->creditCardConfig->getEnvironment()
+                === \Oceanpayment\Payment\Model\Config\Source\Environment::SANDBOX,
+            'language' => 'en',
+            'public_key' => (string) $this->creditCardConfig->getValue('public_key'),
+            'back_url' => $this->signatureHelper->buildBackUrl(),
+        ];
+    }
+
+    /**
+     * 获取支付方式 Logo URL     *
      * 使用 Magento AssetRepository 生成包含正确主题/locale 的静态资源 URL
      *
      * @param string $code 支付方式代码

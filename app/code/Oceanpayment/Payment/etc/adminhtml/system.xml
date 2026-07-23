@@ -112,9 +112,14 @@
                         <can_be_empty>1</can_be_empty>
                         <config_path>payment/oceanpayment_creditcard/specificcountry</config_path>
                     </field>
+                    <field id="public_key" translate="label" type="text" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Public Key</label>
+                        <config_path>payment/oceanpayment_creditcard/public_key</config_path>
+                        <comment>Oceanpayment public key for embedded credit card iframe initialization.</comment>
+                    </field>
                 </group>
 
-                <group id="oceanpayment_applepay" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+            <!--     <group id="oceanpayment_applepay" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Apple Pay</label>
                     <frontend_model>Magento\Config\Block\System\Config\Form\Fieldset</frontend_model>
 
@@ -239,7 +244,7 @@
                         <config_path>payment/oceanpayment_alipay/specificcountry</config_path>
                     </field>
                 </group>
-
+ -->
 
             </group>
         </section>
