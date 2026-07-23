@@ -55,6 +55,8 @@ define([
                     return;
                 }
 
+                this.isPlaceOrderActionAllowed(true);
+
                 creditCardData.set({
                     card_data: data.card_data || '',
                     payment_id: data.payment_id || '',
