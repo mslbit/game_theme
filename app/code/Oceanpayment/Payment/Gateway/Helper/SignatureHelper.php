@@ -12,13 +12,14 @@ use Magento\Store\Model\StoreManagerInterface;
  * - filterSpecialChars(): 特殊字符过滤（Oceanpayment 全局统一规则）
  * - calculateSignature():  通用 SHA256 签名计算（支持不同字段顺序）
  * - buildBackUrl():        支付完成返回 URL
+ * - buildCheckoutBackUrl(): 嵌入式支付返回 URL（结账页）
  * - buildNoticeUrl():      异步通知回调 URL
  *
  * 使用场景：
- * - SendTradeService:         sendTrade 请求签名（合并 Builder 输出后计算）
- * - RefundBuilder:            退款请求签名
- * - RefundSignatureValidator: 退款响应签名验证
- * - CallbackProcessor:        回调/通知签名验证
+ * - SendTradeCommand:       托管支付签名（含 backUrl）
+ * - OrderQueryBuilder:      订单查询签名
+ * - CheckoutData:           嵌入式支付前端表单签名
+ * - CallbackProcessor:      回调/通知签名验证
  */
 class SignatureHelper
 {
@@ -57,7 +58,7 @@ class SignatureHelper
      * 计算 SHA256 签名
      *
      * 按指定字段顺序从数据中提取值，拼接后追加 secureCode，计算 SHA256 哈希。
-     * 不同场景（sendTrade / 退款 / 回调）使用不同的字段顺序，
+     * 不同场景（sendTrade / 回调）使用不同的字段顺序，
      * 但签名算法统一：SHA256(filter(field1) + filter(field2) + ... + filter(secureCode))
      *
      * @param array  $fields     签名字段名列表（按顺序）

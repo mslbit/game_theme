@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace Oceanpayment\Payment\Gateway\Request\Builder;
 
+use Magento\Payment\Gateway\Helper\SubjectReader;
 use Magento\Payment\Gateway\Request\BuilderInterface;
-use Magento\Payment\Gateway\Data\PaymentDataObjectInterface;
 use Magento\Sales\Api\Data\OrderItemInterface;
 
 /**
@@ -31,7 +31,7 @@ class ProductBuilder implements BuilderInterface
      */
     public function build(array $buildSubject): array
     {
-        $paymentDO = $this->readPayment($buildSubject);
+        $paymentDO = SubjectReader::readPayment($buildSubject);
         $payment = $paymentDO->getPayment();
         $order = $payment->getOrder();
 
@@ -81,21 +81,5 @@ class ProductBuilder implements BuilderInterface
         $value = str_replace(['<', '>', '"', "'"], ' ', $value);
 
         return trim($value);
-    }
-
-    /**
-     * 从构建参数中读取 PaymentDataObject
-     *
-     * @param array $buildSubject 构建参数
-     * @return PaymentDataObjectInterface
-     * @throws \InvalidArgumentException
-     */
-    private function readPayment(array $buildSubject): PaymentDataObjectInterface
-    {
-        if (!isset($buildSubject['payment']) || !$buildSubject['payment'] instanceof PaymentDataObjectInterface) {
-            throw new \InvalidArgumentException('Payment data object should be provided');
-        }
-
-        return $buildSubject['payment'];
     }
 }

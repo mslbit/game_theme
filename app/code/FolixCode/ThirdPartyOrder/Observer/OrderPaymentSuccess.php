@@ -45,7 +45,7 @@ class OrderPaymentSuccess implements ObserverInterface
         try {
             /** @var Order\Payment|null $payment */
             $payment = $observer->getEvent()->getData('payment');
-            file_put_contents(BP.'/var/order.log','ttt',FILE_APPEND);
+           
             if (!$payment || !$payment instanceof Order\Payment) {
                 return;
             }

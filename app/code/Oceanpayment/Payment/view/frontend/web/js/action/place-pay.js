@@ -1,52 +1,46 @@
 /**
- * Oceanpayment 发起支付 Action
+ * Oceanpayment 获取 pay_url Action
  *
- * 调用自定义 REST API 一步完成 placeOrder + 获取 pay_url。
- * 返回 jQuery Deferred 对象，由 renderer 的 getPlaceOrderDeferredObject 调用。
- *
- * 区分登录用户和访客用户，调用不同的 API 端点。
+ * 调用 REST API 根据 quoteId 获取 pay_url（3D验证跳转地址）。
+ * 返回 jQuery Deferred，resolve 时传入 pay_url 字符串（可能为 null）。
+ * 跳转逻辑由调用方（renderer）负责。
  */
 define(
     [
         'jquery',
-        'Magento_Checkout/js/model/quote',
         'Magento_Checkout/js/model/url-builder',
-        'Magento_Customer/js/model/customer',
-        'mage/storage'
+        'Magento_Checkout/js/model/error-processor',
+        'mage/storage',
+        'Magento_Checkout/js/model/full-screen-loader',
     ],
     function (
         $,
-        quote,
         urlBuilder,
-        customer,
-        storage
+        errorProcessor,
+        storage,
+        fullScreenLoader
     ) {
         'use strict';
 
-        return function (paymentData) {
-            var serviceUrl,
-                payload;
+        return function (quoteId, messageContainer) {
+            /* API 路由：/V1/oceanpayment/:quoteId/place-pay */
+            var serviceUrl = urlBuilder.createUrl('/oceanpayment/:quoteId/place-pay', {
+                quoteId: quoteId
+            });
 
-            payload = {
-                cartId: quote.getQuoteId(),
-                paymentMethod: paymentData,
-                billingAddress: quote.billingAddress()
-            };
+            var deferred = $.Deferred();
 
-            if (customer.isLoggedIn()) {
-                serviceUrl = urlBuilder.createUrl('/oceanpayment/place-pay', {});
-            } else {
-                serviceUrl = urlBuilder.createUrl('/guest-oceanpayment/:cartId/place-pay', {
-                    cartId: quote.getQuoteId()
+            fullScreenLoader.startLoader();
+            storage.get(serviceUrl)
+                .done(function (payUrl) {
+                    deferred.resolve(payUrl || null);
+                })
+                .fail(function (response) {
+                    errorProcessor.process(response, messageContainer);
+                    deferred.reject(response);
                 });
-                payload.email = quote.guestEmail;
-            }
 
-            return storage.post(
-                serviceUrl,
-                JSON.stringify(payload),
-                true
-            );
+            return deferred.promise();
         };
     }
 );

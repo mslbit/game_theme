@@ -60,6 +60,9 @@ class Back extends Action implements HttpPostActionInterface, CsrfAwareActionInt
      */
     private LoggerInterface $logger;
 
+    /**
+     * 登录态缓存前缀
+     */
     private const CACHE_LOGIN_PREFIX = 'oceanpayment_login_';
 
     /**
@@ -108,9 +111,6 @@ class Back extends Action implements HttpPostActionInterface, CsrfAwareActionInt
      */
     public function execute(): ResultInterface
     {
-        // 3D 验证跨站 POST 回来时 session 丢失，先从 cache+cookie 恢复登录
-        $this->restoreLoginState();
-
         try {
             $params = $this->collectCallbackParams();
 
@@ -121,28 +121,34 @@ class Back extends Action implements HttpPostActionInterface, CsrfAwareActionInt
                 $this->messageManager->addErrorMessage(__('Order not found.'));
                 return $this->redirectToFailure();
             }
-
+        
             /* 订单已处理过，直接跳转成功页 */
             if ($this->callbackProcessor->isOrderAlreadyProcessed($order)) {
                 $this->setCheckoutSessionOrder($order);
                 return $this->redirectToSuccess();
             }
 
-            /* 验证签名 */
+            /* 验证签名：在信任回调参数之前必须先验签 */
             if (!$this->callbackProcessor->verifySignature($params)) {
                 $this->messageManager->addErrorMessage(__('Payment verification failed. Please contact support.'));
                 return $this->redirectToFailure();
             }
+
+            /* 签名验证通过后，恢复登录态（3D 验证跨站 POST 回来时 session 丢失） */
+            $this->restoreLoginState();
 
             /* 委托 CallbackProcessor 处理订单状态更新 */
             $this->callbackProcessor->processCallback($order, $params, 'Back');
 
             /* 根据支付结果重定向 */
             $paymentStatus = (int) ($params['payment_status'] ?? CallbackProcessor::PAYMENT_STATUS_PENDING);
-            return $this->redirectByPaymentStatus($order, $paymentStatus);
+            return $this->redirectByPaymentStatus($order, $paymentStatus, $params);
 
         } catch (\Exception $e) {
-            var_dump($e->getTraceAsString());
+            $this->logger->error('[Oceanpayment] Back controller error: {message}', [
+                'message' => $e->getMessage(),
+                'params' => $params
+            ]);
             $this->messageManager->addErrorMessage(__('An error occurred while processing your payment.'));
             return $this->redirectToFailure();
         }
@@ -196,7 +202,7 @@ class Back extends Action implements HttpPostActionInterface, CsrfAwareActionInt
      * @param int $paymentStatus
      * @return ResultInterface
      */
-    private function redirectByPaymentStatus(OrderInterface $order, int $paymentStatus): ResultInterface
+    private function redirectByPaymentStatus(OrderInterface $order, int $paymentStatus, array $params): ResultInterface
     {
         if ($paymentStatus === CallbackProcessor::PAYMENT_STATUS_SUCCESS) {
             $this->setCheckoutSessionOrder($order);
@@ -204,12 +210,18 @@ class Back extends Action implements HttpPostActionInterface, CsrfAwareActionInt
         }
 
         if ($paymentStatus === CallbackProcessor::PAYMENT_STATUS_FAILED) {
-            // 设置 checkout session 数据，failure 页面依赖 lastQuoteId + lastOrderId
+            /* 设置 checkout session 数据，failure 页面依赖 lastQuoteId + lastOrderId */
             $this->checkoutSession->setLastQuoteId($order->getQuoteId());
             $this->checkoutSession->setLastOrderId($order->getEntityId());
             $this->checkoutSession->setLastRealOrderId($order->getIncrementId());
             $this->checkoutSession->setLastSuccessQuoteId($order->getQuoteId());
             $this->checkoutSession->restoreQuote();
+
+            /* 恢复登录态：3D 验证跨站 POST 回来时 session 丢失 */
+            if ($order->getCustomerId() && !$this->customerSession->isLoggedIn()) {
+                $this->checkoutSession->setQuoteId(null);
+                $this->customerSession->loginById($order->getCustomerId());
+            }
 
             $solutions = $params['payment_solutions'] ?? '';
             $details = $params['payment_details'] ?? '';
@@ -220,7 +232,7 @@ class Back extends Action implements HttpPostActionInterface, CsrfAwareActionInt
             if ($details) {
                 $failMsg = __('Your payment was declined. %1 (%2)', $solutions ?: __('Failed'), $details);
             }
-            // 设置 errorMessage 供 failure 页面 Block 读取
+            /* 设置 errorMessage 供 failure 页面 Block 读取 */
             $this->checkoutSession->setErrorMessage((string) $failMsg);
             $this->messageManager->addErrorMessage($failMsg);
             return $this->redirectToFailure();
@@ -252,6 +264,8 @@ class Back extends Action implements HttpPostActionInterface, CsrfAwareActionInt
 
         /* 恢复客户登录状态：3D 验证跨站 POST 回来时 session cookie 不携带 */
         if ($order->getCustomerId() && !$this->customerSession->isLoggedIn()) {
+            /* 先清空 quoteId，防止 loginById 触发 loadCustomerQuote 重新激活已下单的 quote */
+            $this->checkoutSession->setQuoteId(null);
             $this->customerSession->loginById($order->getCustomerId());
         }
     }
@@ -281,6 +295,8 @@ class Back extends Action implements HttpPostActionInterface, CsrfAwareActionInt
                 return;
             }
 
+            /* 先清空 quoteId，防止 loginById 触发 loadCustomerQuote 重新激活已下单的 quote */
+            $this->checkoutSession->setQuoteId(null);
             $this->customerSession->loginById((int) $customerId);
             $this->cache->remove($cacheKey);
 

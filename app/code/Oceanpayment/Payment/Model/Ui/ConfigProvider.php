@@ -11,18 +11,13 @@ use Oceanpayment\Payment\Gateway\Helper\SignatureHelper;
 /**
  * Oceanpayment 结账配置提供器
  *
- * 将 Oceanpayment 各支付方式的配置信息注入到 Magento Checkout JS 组件中，
+ * 将 Oceanpayment 各嵌入式支付方式的配置信息注入到 Magento Checkout JS 组件中，
  * 使前端可以动态获取支付方式的标题、Logo、启用状态、模式等信息
  *
- * 支持的支付方式：
+ * 支持的支付方式（仅嵌入式）：
  * - Credit Card（信用卡）
  * - Apple Pay
  * - Google Pay
- * - WeChat Pay（微信支付）
- * - Alipay（支付宝）
- *
- * 两种托管结账模式（merchant_controlled / auto_redirect）共享同一套支付方式，
- * mode 仅影响跳转方式，不影响支付方式选择。
  */
 class ConfigProvider implements ConfigProviderInterface
 {
@@ -47,25 +42,39 @@ class ConfigProvider implements ConfigProviderInterface
     public const CODE_GOOGLEPAY = 'oceanpayment_googlepay';
 
     /**
-     * WeChat Pay 支付方式代码
-     */
-    public const CODE_WECHATPAY = 'oceanpayment_wechatpay';
-
-    /**
-     * Alipay 支付方式代码
-     */
-    public const CODE_ALIPAY = 'oceanpayment_alipay';
-
-    /**
      * Logo 图片文件名映射
-     * 键为支付方式代码，值为 Logo 文件名
      */
     private const LOGO_MAP = [
         self::CODE_CREDITCARD => 'creditcard.svg',
         self::CODE_APPLEPAY   => 'applepay.svg',
         self::CODE_GOOGLEPAY  => 'googlepay.svg',
-        self::CODE_WECHATPAY  => 'wechatpay.svg',
-        self::CODE_ALIPAY     => 'alipay.svg',
+    ];
+
+    /**
+     * 嵌入式支付方式代码列表
+     */
+    private const EMBEDDED_METHODS = [
+        self::CODE_CREDITCARD,
+        self::CODE_APPLEPAY,
+        self::CODE_GOOGLEPAY,
+    ];
+
+    /**
+     * 嵌入式 SDK URL 映射
+     */
+    private const SDK_URL_MAP = [
+        self::CODE_CREDITCARD => [
+            'sandbox'    => 'https://test-secure.oceanpayment.com/pages/js/oceanpayment.js',
+            'production' => 'https://secure.oceanpayment.com/pages/js/oceanpayment.js',
+        ],
+        self::CODE_APPLEPAY => [
+            'sandbox'    => 'https://test-secure.oceanpayment.com/pages/js/oceanpayment-applepay.js',
+            'production' => 'https://secure.oceanpayment.com/pages/js/oceanpayment-applepay.js',
+        ],
+        self::CODE_GOOGLEPAY => [
+            'sandbox'    => 'https://test-secure.oceanpayment.com/pages/js/oceanpayment-googlepay.js',
+            'production' => 'https://secure.oceanpayment.com/pages/js/oceanpayment-googlepay.js',
+        ],
     ];
 
     /**
@@ -84,16 +93,6 @@ class ConfigProvider implements ConfigProviderInterface
     private Config $googlePayConfig;
 
     /**
-     * @var Config WeChat Pay 配置实例
-     */
-    private Config $wechatPayConfig;
-
-    /**
-     * @var Config Alipay 配置实例
-     */
-    private Config $alipayConfig;
-
-    /**
      * @var AssetRepository 静态资源仓库
      */
     private AssetRepository $assetRepository;
@@ -106,11 +105,9 @@ class ConfigProvider implements ConfigProviderInterface
     /**
      * Constructor
      *
-     * @param Config $creditCardConfig Credit Card 配置（OPCreditCardConfig 虚拟类型）
-     * @param Config $applePayConfig Apple Pay 配置（OPApplePayConfig 虚拟类型）
-     * @param Config $googlePayConfig Google Pay 配置（OPGooglePayConfig 虚拟类型）
-     * @param Config $wechatPayConfig WeChat Pay 配置（OPWechatPayConfig 虚拟类型）
-     * @param Config $alipayConfig Alipay 配置（OPAlipayConfig 虚拟类型）
+     * @param Config $creditCardConfig Credit Card 配置
+     * @param Config $applePayConfig Apple Pay 配置
+     * @param Config $googlePayConfig Google Pay 配置
      * @param AssetRepository $assetRepository 静态资源仓库
      * @param SignatureHelper $signatureHelper 签名与 URL 辅助
      */
@@ -118,16 +115,12 @@ class ConfigProvider implements ConfigProviderInterface
         Config $creditCardConfig,
         Config $applePayConfig,
         Config $googlePayConfig,
-        Config $wechatPayConfig,
-        Config $alipayConfig,
         AssetRepository $assetRepository,
         SignatureHelper $signatureHelper
     ) {
         $this->creditCardConfig = $creditCardConfig;
         $this->applePayConfig = $applePayConfig;
         $this->googlePayConfig = $googlePayConfig;
-        $this->wechatPayConfig = $wechatPayConfig;
-        $this->alipayConfig = $alipayConfig;
         $this->assetRepository = $assetRepository;
         $this->signatureHelper = $signatureHelper;
     }
@@ -137,22 +130,18 @@ class ConfigProvider implements ConfigProviderInterface
      *
      * 将所有已启用的 Oceanpayment 支付方式配置注入到 Checkout JS 中，
      * 每种支付方式包含：code, title, is_active, logo_url
-     * 同时暴露 mode 配置供前端判断跳转方式
      *
      * @return array 结账配置数组
      */
     public function getConfig(): array
     {
-        $mode = $this->creditCardConfig->getMode();
         $config = [
             'payment' => [
                 self::CODE => [
-                    'mode' => $mode,
-                    'is_production'   => 
-                    $this->creditCardConfig->getEnvironment() 
-                    === \Oceanpayment\Payment\Model\Config\Source\Environment::PRODUCTION ,
+                    'is_production' =>
+                    $this->creditCardConfig->getEnvironment()
+                    === \Oceanpayment\Payment\Model\Config\Source\Environment::PRODUCTION,
                     'methods' => [],
-                    'embedded' => $this->getEmbeddedConfig(),
                 ],
             ],
         ];
@@ -171,16 +160,19 @@ class ConfigProvider implements ConfigProviderInterface
                 'logo_url'  => $this->getLogoUrl($code),
             ];
 
+            /* 嵌入式支付方式：将 embedded 配置注入到对应 method 下，禁用的不暴露 */
+            if (in_array($code, self::EMBEDDED_METHODS, true)) {
+                $methodData['embedded'] = $this->getEmbeddedConfig($code);
+            }
+
             $config['payment'][self::CODE]['methods'][$code] = $methodData;
         }
 
         return $config;
     }
 
-
-
     /**
-     * 获取所有支付方式的配置实例映射
+     * 获取所有支付方式的配置实例映射（仅嵌入式3种）
      *
      * @return array<string, Config> 支付方式代码 => 配置实例
      */
@@ -190,8 +182,6 @@ class ConfigProvider implements ConfigProviderInterface
             self::CODE_CREDITCARD => $this->creditCardConfig,
             self::CODE_APPLEPAY   => $this->applePayConfig,
             self::CODE_GOOGLEPAY  => $this->googlePayConfig,
-            self::CODE_WECHATPAY  => $this->wechatPayConfig,
-            self::CODE_ALIPAY     => $this->alipayConfig,
         ];
     }
 
@@ -220,23 +210,30 @@ class ConfigProvider implements ConfigProviderInterface
     /**
      * 获取嵌入式支付配置
      *
-     * 供前端 Oceanpayment.init() 初始化 iframe 时使用
+     * 供前端 SDK init() 使用，只包含当前支付方式的 SDK URL
      *
+     * @param string $methodCode 支付方式代码
      * @return array
      */
-    private function getEmbeddedConfig(): array
+    private function getEmbeddedConfig(string $methodCode): array
     {
+        $isSandbox = $this->creditCardConfig->getEnvironment()
+            === \Oceanpayment\Payment\Model\Config\Source\Environment::SANDBOX;
+        $envKey = $isSandbox ? 'sandbox' : 'production';
+
         return [
-            'is_sandbox' => $this->creditCardConfig->getEnvironment()
-                === \Oceanpayment\Payment\Model\Config\Source\Environment::SANDBOX,
-            'language' => 'en',
-            'public_key' => (string) $this->creditCardConfig->getValue('public_key'),
-            'back_url' => $this->signatureHelper->buildBackUrl(),
+            'is_sandbox' => $isSandbox,
+            'language'   => 'en',
+            'terminal'   => $this->creditCardConfig->getTerminal(),
+          //  'public_key' => (string) $this->creditCardConfig->getValue('public_key'),
+            'back_url'   => $this->signatureHelper->buildBackUrl(),
+            'sdk_url'    => self::SDK_URL_MAP[$methodCode][$envKey] ?? '',
         ];
     }
 
     /**
-     * 获取支付方式 Logo URL     *
+     * 获取支付方式 Logo URL
+     *
      * 使用 Magento AssetRepository 生成包含正确主题/locale 的静态资源 URL
      *
      * @param string $code 支付方式代码

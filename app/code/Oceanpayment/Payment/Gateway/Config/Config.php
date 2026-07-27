@@ -4,10 +4,8 @@ declare(strict_types=1);
 namespace Oceanpayment\Payment\Gateway\Config;
 
 use Magento\Framework\App\Config\ScopeConfigInterface;
-
 use Magento\Payment\Gateway\Config\Config as GatewayConfig;
 use Magento\Store\Model\ScopeInterface;
-use Oceanpayment\Payment\Model\Config\Source\Mode;
 
 /**
  * Oceanpayment 网关配置类
@@ -22,6 +20,7 @@ class Config extends GatewayConfig
 {
     /**
      * 共享网关配置的 XML 路径前缀
+     * 注意：Oceanpayment_Payment 模块使用 oceanpayment_payment 配置段
      */
     private const SHARED_CONFIG_PREFIX = 'payment/oceanpayment_payment';
 
@@ -36,11 +35,6 @@ class Config extends GatewayConfig
     private const PATH_DEBUG = self::SHARED_CONFIG_PREFIX . '/debug';
 
     /**
-     * 托管结账模式配置路径
-     */
-    private const PATH_MODE = self::SHARED_CONFIG_PREFIX . '/mode';
-
-    /**
      * 沙箱环境标识
      */
     private const ENV_SANDBOX = 'sandbox';
@@ -51,6 +45,14 @@ class Config extends GatewayConfig
     private const ENV_PRODUCTION = 'production';
 
     /**
+     * 查询/退款域名（按环境区分）
+     */
+    public const ENDPOINT = [
+        'sandbox'    => 'https://test-query.oceanpayment.com',
+        'production' => 'https://query.oceanpayment.com',
+    ];
+
+    /**
      * 按环境区分的共享配置字段映射
      * 键为对外暴露的方法名后缀，值为 [sandbox_path, production_path]
      */
@@ -58,7 +60,6 @@ class Config extends GatewayConfig
         'account'     => ['sandbox_account',     'production_account'],
         'terminal'    => ['sandbox_terminal',    'production_terminal'],
         'securecode'  => ['sandbox_securecode',  'production_securecode'],
-
         'gateway_url' => ['sandbox_gateway_url', 'production_gateway_url'],
     ];
 
@@ -116,7 +117,6 @@ class Config extends GatewayConfig
     }
 
     /**
-
      * 获取 Oceanpayment 网关 URL
      *
      * @return string
@@ -153,42 +153,9 @@ class Config extends GatewayConfig
     }
 
     /**
-     * 获取托管结账模式
-     *
-     * @return string merchant_controlled 或 auto_redirect
-     */
-    public function getMode(): string
-    {
-        return (string) $this->scopeConfig->getValue(
-            self::PATH_MODE,
-            ScopeInterface::SCOPE_STORE
-        );
-    }
-
-    /**
-     * 判断是否为自动重定向模式
-     *
-     * @return bool
-     */
-    public function isAutoRedirect(): bool
-    {
-        return $this->getMode() === Mode::MODE_AUTO_REDIRECT;
-    }
-
-    /**
-     * 判断是否为嵌入式支付模式
-     *
-     * @return bool
-     */
-    public function isEmbedded(): bool
-    {
-        return $this->getMode() === Mode::MODE_EMBEDDED;
-    }
-
-    /**
      * 获取支付方式对应的 Oceanpayment 交易方法标识
      *
-     * 例如 Credit Card、ApplePay、WechatPay_Web 等
+     * 例如 Credit Card、ApplePay 等
      * 此值从支付方式级别配置（payment/<methodCode>/methods）读取
      *
      * @return string
@@ -232,6 +199,57 @@ class Config extends GatewayConfig
     public function getGatewayMerchantId(): string
     {
         return (string) $this->getValue('gateway_merchant_id');
+    }
+
+    /**
+     * 获取异步通知 IP 白名单
+     *
+     * 从 payment/oceanpayment_payment/notification_ip_whitelist 读取，
+     * 每行一个 IP，返回去重后的 IP 数组
+     *
+     * @return string[]
+     */
+    public function getNotificationIpWhitelist(): array
+    {
+        $raw = (string) $this->scopeConfig->getValue(
+            self::SHARED_CONFIG_PREFIX . '/notification_ip_whitelist',
+            ScopeInterface::SCOPE_STORE
+        );
+
+        if (trim($raw) === '') {
+            return [];
+        }
+
+        $ips = array_map('trim', explode("\n", $raw));
+        $ips = array_filter($ips, static fn(string $ip): bool => $ip !== '');
+
+        return array_unique($ips);
+    }
+
+    /**
+     * 是否允许所有 IP 的异步通知（测试模式）
+     *
+     * @return bool
+     */
+    public function isNotificationIpAllowAll(): bool
+    {
+        return $this->scopeConfig->isSetFlag(
+            self::SHARED_CONFIG_PREFIX . '/notification_ip_allow_all',
+            ScopeInterface::SCOPE_STORE
+        );
+    }
+
+    /**
+     * 获取查询域名
+     *
+     * 根据当前环境（sandbox/production）返回对应的 query 域名
+     *
+     * @return string
+     */
+    public function getQueryBaseUrl(): string
+    {
+        $env = $this->getEnvironment();
+        return self::ENDPOINT[$env] ?? self::ENDPOINT['sandbox'];
     }
 
     /**

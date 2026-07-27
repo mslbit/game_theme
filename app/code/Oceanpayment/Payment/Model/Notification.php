@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Oceanpayment\Payment\Model;
 
+use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\Request\Http as HttpRequest;
 use Oceanpayment\Payment\Api\NotificationInterface;
 use Oceanpayment\Payment\Gateway\Callback\CallbackProcessor;
@@ -53,6 +54,11 @@ class Notification implements NotificationInterface
     ];
 
     /**
+     * 共享网关配置的 XML 路径前缀
+     */
+    private const SHARED_CONFIG_PREFIX = 'payment/oceanpayment_payment';
+
+    /**
      * @var LoggerInterface
      */
     private LoggerInterface $logger;
@@ -73,21 +79,29 @@ class Notification implements NotificationInterface
     private XmlHelper $xmlHelper;
 
     /**
+     * @var ScopeConfigInterface
+     */
+    private ScopeConfigInterface $scopeConfig;
+
+    /**
      * @param LoggerInterface $logger
      * @param HttpRequest $request
      * @param CallbackProcessor $callbackProcessor
      * @param XmlHelper $xmlHelper
+     * @param ScopeConfigInterface $scopeConfig
      */
     public function __construct(
         LoggerInterface $logger,
         HttpRequest $request,
         CallbackProcessor $callbackProcessor,
-        XmlHelper $xmlHelper
+        XmlHelper $xmlHelper,
+        ScopeConfigInterface $scopeConfig
     ) {
         $this->logger = $logger;
         $this->request = $request;
         $this->callbackProcessor = $callbackProcessor;
         $this->xmlHelper = $xmlHelper;
+        $this->scopeConfig = $scopeConfig;
     }
 
     /**
@@ -98,6 +112,14 @@ class Notification implements NotificationInterface
     public function handle(): string
     {
         try {
+            /* IP 白名单校验 */
+            if (!$this->validateIpWhitelist()) {
+                $this->logger->error('[Oceanpayment] Notification: IP not in whitelist', [
+                    'remote_ip' => $this->getRemoteIp(),
+                ]);
+                return 'ip forbidden';
+            }
+
             $xmlContent = $this->request->getContent();
 
             if (empty($xmlContent)) {
@@ -161,5 +183,53 @@ class Notification implements NotificationInterface
             $this->logger->error('[Oceanpayment] Notification exception: %1', [$e->getMessage()]);
             return 'error';
         }
+    }
+
+    /**
+     * 校验请求 IP 是否在白名单中
+     *
+     * 当 notification_ip_allow_all=Yes 时跳过校验（测试模式）
+     * 当 notification_ip_allow_all=No 时，请求 IP 必须在白名单中
+     *
+     * @return bool
+     */
+    private function validateIpWhitelist(): bool
+    {
+        $allowAll = $this->scopeConfig->isSetFlag(
+            self::SHARED_CONFIG_PREFIX . '/notification_ip_allow_all',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
+
+        if ($allowAll) {
+            return true;
+        }
+
+        $rawWhitelist = (string) $this->scopeConfig->getValue(
+            self::SHARED_CONFIG_PREFIX . '/notification_ip_whitelist',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
+
+        if (trim($rawWhitelist) === '') {
+            $this->logger->warning('[Oceanpayment] Notification: IP whitelist is empty and allow_all is disabled, rejecting all');
+            return false;
+        }
+
+        $whitelist = array_map('trim', explode("\n", $rawWhitelist));
+        $whitelist = array_filter($whitelist, static fn(string $ip): bool => $ip !== '');
+        $whitelist = array_unique($whitelist);
+
+        $remoteIp = $this->getRemoteIp();
+
+        return in_array($remoteIp, $whitelist, true);
+    }
+
+    /**
+     * 获取请求来源 IP
+     *
+     * @return string
+     */
+    private function getRemoteIp(): string
+    {
+        return (string) $this->request->getServer('REMOTE_ADDR', '');
     }
 }

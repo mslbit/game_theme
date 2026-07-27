@@ -10,8 +10,6 @@
         <method name="oceanpayment_creditcard"/>
         <method name="oceanpayment_applepay"/>
         <method name="oceanpayment_googlepay"/>
-        <method name="oceanpayment_wechatpay"/>
-        <method name="oceanpayment_alipay"/>
 
     </methods>
 </payment>

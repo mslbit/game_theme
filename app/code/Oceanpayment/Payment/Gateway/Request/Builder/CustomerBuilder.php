@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 namespace Oceanpayment\Payment\Gateway\Request\Builder;
 
+use Magento\Payment\Gateway\Helper\SubjectReader;
 use Magento\Payment\Gateway\Request\BuilderInterface;
-use Magento\Payment\Gateway\Data\PaymentDataObjectInterface;
-use Magento\Framework\App\RequestInterface;
+use Magento\Framework\HTTP\PhpEnvironment\RemoteAddress;
 use Oceanpayment\Payment\Gateway\Config\Config;
 use Oceanpayment\Payment\Service\GeoIpService;
 
@@ -52,9 +52,9 @@ class CustomerBuilder implements BuilderInterface
     private Config $config;
 
     /**
-     * @var RequestInterface HTTP 请求接口（用于获取客户 IP）
+     * @var RemoteAddress 客户端 IP 获取（支持可信代理配置）
      */
-    private RequestInterface $httpRequest;
+    private RemoteAddress $remoteAddress;
 
     /**
      * @var GeoIpService GeoIP 查询服务（虚拟产品根据 IP 获取国家/城市）
@@ -65,16 +65,16 @@ class CustomerBuilder implements BuilderInterface
      * Constructor
      *
      * @param Config $config Oceanpayment 网关配置
-     * @param RequestInterface $httpRequest HTTP 请求接口
+     * @param RemoteAddress $remoteAddress 客户端 IP 获取
      * @param GeoIpService $geoIpService GeoIP 查询服务
      */
     public function __construct(
         Config $config,
-        RequestInterface $httpRequest,
+        RemoteAddress $remoteAddress,
         GeoIpService $geoIpService
     ) {
         $this->config = $config;
-        $this->httpRequest = $httpRequest;
+        $this->remoteAddress = $remoteAddress;
         $this->geoIpService = $geoIpService;
     }
 
@@ -86,14 +86,14 @@ class CustomerBuilder implements BuilderInterface
      */
     public function build(array $buildSubject): array
     {
-        $paymentDO = $this->readPayment($buildSubject);
+        $paymentDO = SubjectReader::readPayment($buildSubject);
         $payment = $paymentDO->getPayment();
         
         /* 从 payment 获取原始 order 对象（避免 Braintree OrderAdapter 缺少方法） */
         $order = $payment->getOrder();
         $billingAddress = $order->getBillingAddress();
 
-        /* 虚拟订单（如游戏充值）可能无账单地址，或 SimpleCheckout 注入假 billing */
+        /* 虚拟订单（如游戏充值）可能无账单地址 */
         $isVirtual = (bool) $order->getIsVirtual();
         $customerEmail = $order->getCustomerEmail() ?? '';
         $customerFirstname = trim((string) ($order->getCustomerFirstname() ?? ''));
@@ -114,7 +114,7 @@ class CustomerBuilder implements BuilderInterface
         $billingPhone = $billingAddress ? (string) $billingAddress->getTelephone() : '';
 
         /*
-         * 虚拟产品：优先使用订单客户信息（SimpleCheckout 会注入假 billing）
+         * 虚拟产品：优先使用订单客户信息
          * 实体产品：优先使用账单地址
          */
         if ($isVirtual) {
@@ -136,7 +136,7 @@ class CustomerBuilder implements BuilderInterface
             'billing_firstName' => $firstName,
             'billing_lastName'  => $lastName,
             'billing_email'     => $customerEmail,
-            'billing_phone'     => $billingPhone ?? $this->generateMaskedMobileNumber(),
+            'billing_phone'     => $billingPhone ?: $this->generateMaskedMobileNumber(),
             'billing_country'   => $billingCountry,
             'billing_state'     => $billingState,
             'billing_city'      => $billingCity,
@@ -146,11 +146,18 @@ class CustomerBuilder implements BuilderInterface
         ];
     }
 
-   private function generateMaskedMobileNumber() {
+    /**
+     * 生成脱敏手机号（虚拟产品无电话时使用）
+     *
+     * @return string 脱敏手机号
+     */
+    private function generateMaskedMobileNumber(): string
+    {
         $prefix = '1' . mt_rand(3, 9) . mt_rand(0, 9);
         $suffix = sprintf('%04d', mt_rand(0, 9999));
         return $prefix . '****' . $suffix;
-  }
+    }
+
     /**
      * 获取账单地址的街道首行
      *
@@ -168,38 +175,13 @@ class CustomerBuilder implements BuilderInterface
     /**
      * 获取客户远程 IP 地址
      *
-     * 优先从 HTTP_X_FORWARDED_FOR 获取（代理/CDN 场景），
-     * 回退到 REMOTE_ADDR
+     * 使用 Magento RemoteAddress，支持通过后台配置可信代理列表，
+     * 避免直接信任 X-Forwarded-For 导致 IP 伪造
      *
      * @return string 客户 IP 地址
      */
     private function getRemoteAddress(): string
     {
-        /* 优先检查代理转发的真实 IP */
-        $forwardedFor = $this->httpRequest->getServer('HTTP_X_FORWARDED_FOR');
-        if (!empty($forwardedFor)) {
-            /* X-Forwarded-For 可能包含多个 IP，取第一个（最原始的客户端 IP） */
-            $ips = explode(',', (string) $forwardedFor);
-            return trim($ips[0]);
-        }
-
-        /* 回退到直连 IP */
-        return (string) $this->httpRequest->getServer('REMOTE_ADDR', '');
-    }
-
-    /**
-     * 从构建参数中读取 PaymentDataObject
-     *
-     * @param array $buildSubject 构建参数
-     * @return PaymentDataObjectInterface
-     * @throws \InvalidArgumentException
-     */
-    private function readPayment(array $buildSubject): PaymentDataObjectInterface
-    {
-        if (!isset($buildSubject['payment']) || !$buildSubject['payment'] instanceof PaymentDataObjectInterface) {
-            throw new \InvalidArgumentException('Payment data object should be provided');
-        }
-
-        return $buildSubject['payment'];
+        return (string) $this->remoteAddress->getRemoteAddress();
     }
 }

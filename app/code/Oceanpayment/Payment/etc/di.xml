@@ -3,15 +3,9 @@
 /**
  * Oceanpayment Payment Module - DI Configuration
  *
- * 基于 Magento 2 Payment Gateway Facade 模式，为 5 种支付方式配置依赖注入：
- * - Credit Card（信用卡）
- * - Apple Pay
- * - Google Pay
- * - WeChat Pay（微信支付）
- * - Alipay（支付宝）
- *
- * 核心架构：每种支付方式拥有独立的 Config / ValueHandlerPool / ValidatorPool / CommandPool / Facade，
- * 共享 TransferFactory / Client 等通用组件。
+     * 嵌入式支付（CC/ApplePay/GooglePay）通过不同的 Command 组合：
+     * - authorize=NullCommand（前端 SDK.checkout() 提交网关，authorize 阶段无需后端操作）
+     * - capture=NullCommand（回调/通知确认后由 PaymentSuccessService 处理，无需 Command Pool capture）
  */
 -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -19,7 +13,6 @@
 
     <!-- ========================================================================
          Section 1: Logger
-         支付模块专用日志记录器，注入 Psr\Log\LoggerInterface
          ======================================================================== -->
     <virtualType name="OPLogger" type="Magento\Payment\Model\Method\Logger">
         <arguments>
@@ -29,51 +22,26 @@
 
     <!-- ========================================================================
          Section 2: Config - 每种支付方式独立的配置虚拟类型
-         通过 methodCode 参数绑定到对应的支付方式配置
          ======================================================================== -->
-
-    <!-- Credit Card 配置 -->
     <virtualType name="OPCreditCardConfig" type="Oceanpayment\Payment\Gateway\Config\Config">
         <arguments>
             <argument name="methodCode" xsi:type="const">Oceanpayment\Payment\Model\Ui\ConfigProvider::CODE_CREDITCARD</argument>
         </arguments>
     </virtualType>
-
-    <!-- Apple Pay 配置 -->
     <virtualType name="OPApplePayConfig" type="Oceanpayment\Payment\Gateway\Config\Config">
         <arguments>
             <argument name="methodCode" xsi:type="const">Oceanpayment\Payment\Model\Ui\ConfigProvider::CODE_APPLEPAY</argument>
         </arguments>
     </virtualType>
-
-    <!-- Google Pay 配置 -->
     <virtualType name="OPGooglePayConfig" type="Oceanpayment\Payment\Gateway\Config\Config">
         <arguments>
             <argument name="methodCode" xsi:type="const">Oceanpayment\Payment\Model\Ui\ConfigProvider::CODE_GOOGLEPAY</argument>
         </arguments>
     </virtualType>
 
-    <!-- WeChat Pay 配置 -->
-    <virtualType name="OPWechatPayConfig" type="Oceanpayment\Payment\Gateway\Config\Config">
-        <arguments>
-            <argument name="methodCode" xsi:type="const">Oceanpayment\Payment\Model\Ui\ConfigProvider::CODE_WECHATPAY</argument>
-        </arguments>
-    </virtualType>
-
-    <!-- Alipay 配置 -->
-    <virtualType name="OPAlipayConfig" type="Oceanpayment\Payment\Gateway\Config\Config">
-        <arguments>
-            <argument name="methodCode" xsi:type="const">Oceanpayment\Payment\Model\Ui\ConfigProvider::CODE_ALIPAY</argument>
-        </arguments>
-    </virtualType>
-
-
     <!-- ========================================================================
-         Section 3: Value Handler Pool - 每种支付方式的配置值处理器池
-         default handler 指向各自的 Config 虚拟类型，用于读取支付方式级别的配置项
+         Section 3: Value Handler Pool
          ======================================================================== -->
-
-    <!-- Credit Card 值处理器池 -->
     <virtualType name="OPCreditCardValueHandlerPool" type="Magento\Payment\Gateway\Config\ValueHandlerPool">
         <arguments>
             <argument name="handlers" xsi:type="array">
@@ -87,7 +55,6 @@
         </arguments>
     </virtualType>
 
-    <!-- Apple Pay 值处理器池 -->
     <virtualType name="OPApplePayValueHandlerPool" type="Magento\Payment\Gateway\Config\ValueHandlerPool">
         <arguments>
             <argument name="handlers" xsi:type="array">
@@ -101,7 +68,6 @@
         </arguments>
     </virtualType>
 
-    <!-- Google Pay 值处理器池 -->
     <virtualType name="OPGooglePayValueHandlerPool" type="Magento\Payment\Gateway\Config\ValueHandlerPool">
         <arguments>
             <argument name="handlers" xsi:type="array">
@@ -115,41 +81,9 @@
         </arguments>
     </virtualType>
 
-    <!-- WeChat Pay 值处理器池 -->
-    <virtualType name="OPWechatPayValueHandlerPool" type="Magento\Payment\Gateway\Config\ValueHandlerPool">
-        <arguments>
-            <argument name="handlers" xsi:type="array">
-                <item name="default" xsi:type="string">OPWechatPayConfigValueHandler</item>
-            </argument>
-        </arguments>
-    </virtualType>
-    <virtualType name="OPWechatPayConfigValueHandler" type="Magento\Payment\Gateway\Config\ConfigValueHandler">
-        <arguments>
-            <argument name="configInterface" xsi:type="object">OPWechatPayConfig</argument>
-        </arguments>
-    </virtualType>
-
-    <!-- Alipay 值处理器池 -->
-    <virtualType name="OPAlipayValueHandlerPool" type="Magento\Payment\Gateway\Config\ValueHandlerPool">
-        <arguments>
-            <argument name="handlers" xsi:type="array">
-                <item name="default" xsi:type="string">OPAlipayConfigValueHandler</item>
-            </argument>
-        </arguments>
-    </virtualType>
-    <virtualType name="OPAlipayConfigValueHandler" type="Magento\Payment\Gateway\Config\ConfigValueHandler">
-        <arguments>
-            <argument name="configInterface" xsi:type="object">OPAlipayConfig</argument>
-        </arguments>
-    </virtualType>
-
-
     <!-- ========================================================================
-         Section 4: Validator Pool - 每种支付方式的验证器池
-         所有支付方式共享同一个 CountryValidator 类，用于国家/地区可用性校验
+         Section 4: Validator Pool
          ======================================================================== -->
-
-    <!-- Credit Card 验证器池 -->
     <virtualType name="OPCreditCardValidatorPool" type="Magento\Payment\Gateway\Validator\ValidatorPool">
         <arguments>
             <argument name="validators" xsi:type="array">
@@ -157,8 +91,6 @@
             </argument>
         </arguments>
     </virtualType>
-
-    <!-- Apple Pay 验证器池 -->
     <virtualType name="OPApplePayValidatorPool" type="Magento\Payment\Gateway\Validator\ValidatorPool">
         <arguments>
             <argument name="validators" xsi:type="array">
@@ -166,8 +98,6 @@
             </argument>
         </arguments>
     </virtualType>
-
-    <!-- Google Pay 验证器池 -->
     <virtualType name="OPGooglePayValidatorPool" type="Magento\Payment\Gateway\Validator\ValidatorPool">
         <arguments>
             <argument name="validators" xsi:type="array">
@@ -176,227 +106,79 @@
         </arguments>
     </virtualType>
 
-    <!-- WeChat Pay 验证器池 -->
-    <virtualType name="OPWechatPayValidatorPool" type="Magento\Payment\Gateway\Validator\ValidatorPool">
-        <arguments>
-            <argument name="validators" xsi:type="array">
-                <item name="country" xsi:type="string">OPWechatPayCountryValidator</item>
-            </argument>
-        </arguments>
-    </virtualType>
-
-    <!-- Alipay 验证器池 -->
-    <virtualType name="OPAlipayValidatorPool" type="Magento\Payment\Gateway\Validator\ValidatorPool">
-        <arguments>
-            <argument name="validators" xsi:type="array">
-                <item name="country" xsi:type="string">OPAlipayCountryValidator</item>
-            </argument>
-        </arguments>
-    </virtualType>
-
-    <!-- Credit Card 国家验证器 -->
     <virtualType name="OPCreditCardCountryValidator" type="Magento\Payment\Gateway\Validator\CountryValidator">
         <arguments>
             <argument name="config" xsi:type="object">OPCreditCardConfig</argument>
         </arguments>
     </virtualType>
-
-    <!-- Apple Pay 国家验证器 -->
     <virtualType name="OPApplePayCountryValidator" type="Magento\Payment\Gateway\Validator\CountryValidator">
         <arguments>
             <argument name="config" xsi:type="object">OPApplePayConfig</argument>
         </arguments>
     </virtualType>
-
-    <!-- Google Pay 国家验证器 -->
     <virtualType name="OPGooglePayCountryValidator" type="Magento\Payment\Gateway\Validator\CountryValidator">
         <arguments>
             <argument name="config" xsi:type="object">OPGooglePayConfig</argument>
         </arguments>
     </virtualType>
 
-    <!-- WeChat Pay 国家验证器 -->
-    <virtualType name="OPWechatPayCountryValidator" type="Magento\Payment\Gateway\Validator\CountryValidator">
-        <arguments>
-            <argument name="config" xsi:type="object">OPWechatPayConfig</argument>
-        </arguments>
-    </virtualType>
-
-    <!-- Alipay 国家验证器 -->
-    <virtualType name="OPAlipayCountryValidator" type="Magento\Payment\Gateway\Validator\CountryValidator">
-        <arguments>
-            <argument name="config" xsi:type="object">OPAlipayConfig</argument>
-        </arguments>
-    </virtualType>
-
-
     <!-- ========================================================================
-         Section 5: SendTradeService - 托管收银服务
-         编排层：调用 Builder 构建参数 → 合并 → 签名 → 发送 → 解析响应
-         Builder 只负责构建各自参数片段，签名在合并后由本服务计算
-         TransferFactory 保留为通用 HTTP 传输层，后期可扩展其他模式
+         Section 5: EmbeddedCapture Command - 嵌入式 capture 命令
+         查询网关订单状态 + 金额校验，不成功则标记审查
          ======================================================================== -->
-    <type name="Oceanpayment\Payment\Gateway\Service\SendTradeService">
-        <arguments>
-            <!-- 订单参数构建：order_number, order_currency, order_amount, methods, backUrl, noticeUrl, pages -->
-            <argument name="orderBuilder" xsi:type="object">Oceanpayment\Payment\Gateway\Request\Builder\OrderBuilder</argument>
-            <!-- 客户信息构建：account, terminal, billing_* 字段（含虚拟产品降级） -->
-            <argument name="customerBuilder" xsi:type="object">Oceanpayment\Payment\Gateway\Request\Builder\CustomerBuilder</argument>
-            <!-- 网关配置：读取 secureCode 用于签名计算 -->
-            <argument name="config" xsi:type="object">Oceanpayment\Payment\Gateway\Config\Config</argument>
-            <!-- 签名计算：SignatureHelper -->
-            <argument name="signatureHelper" xsi:type="object">Oceanpayment\Payment\Gateway\Helper\SignatureHelper</argument>
-            <!-- HTTP 传输工厂 -->
-            <argument name="transferFactory" xsi:type="object">Oceanpayment\Payment\Gateway\Http\TransferFactory</argument>
-            <!-- HTTP 客户端 -->
-            <argument name="client" xsi:type="object">Oceanpayment\Payment\Gateway\Http\Client</argument>
-        </arguments>
-    </type>
 
-    <!-- ========================================================================
-         Section 5.5: AutoRedirectService - 自动重定向服务
-         托管结账自动重定向模式：POST /pay → 处理 302 重定向
-         数据收集与签名计算与 SendTradeService 完全一致，仅端点和响应处理不同
-         ======================================================================== -->
-    <type name="Oceanpayment\Payment\Gateway\Service\AutoRedirectService">
+    <!-- 订单查询请求构建器 -->
+    <virtualType name="OPEmbeddedCaptureRequest" type="Oceanpayment\Payment\Gateway\Request\Builder\OrderQueryBuilder">
         <arguments>
-            <argument name="orderBuilder" xsi:type="object">Oceanpayment\Payment\Gateway\Request\Builder\OrderBuilder</argument>
-            <argument name="customerBuilder" xsi:type="object">Oceanpayment\Payment\Gateway\Request\Builder\CustomerBuilder</argument>
             <argument name="config" xsi:type="object">Oceanpayment\Payment\Gateway\Config\Config</argument>
             <argument name="signatureHelper" xsi:type="object">Oceanpayment\Payment\Gateway\Helper\SignatureHelper</argument>
-            <argument name="transferFactory" xsi:type="object">Oceanpayment\Payment\Gateway\Http\TransferFactory</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- 嵌入式 capture 命令：查询网关确认支付结果 -->
+    <virtualType name="OPEmbeddedCaptureCommand" type="Oceanpayment\Payment\Gateway\Command\EmbeddedCaptureCommand">
+        <arguments>
+            <argument name="requestBuilder" xsi:type="object">OPEmbeddedCaptureRequest</argument>
+            <argument name="transferFactory" xsi:type="object">Oceanpayment\Payment\Gateway\Http\OrderQueryTransferFactory</argument>
             <argument name="client" xsi:type="object">Oceanpayment\Payment\Gateway\Http\Client</argument>
         </arguments>
-    </type>
-
-    <!-- ========================================================================
-         Section 6: Initialize Command - 初始化命令
-         托管收银模式下，Payment::place() 走 isInitializeNeeded 分支，
-         由 InitializeCommand 调用 SendTradeService 获取 pay_url
-         设置订单状态为 pending_payment
-         ======================================================================== -->
-    <virtualType name="OPCreditCardInitializeCommand" type="Oceanpayment\Payment\Gateway\Command\InitializeCommand">
-    </virtualType>
-    <virtualType name="OPApplePayInitializeCommand" type="Oceanpayment\Payment\Gateway\Command\InitializeCommand">
-    </virtualType>
-    <virtualType name="OPGooglePayInitializeCommand" type="Oceanpayment\Payment\Gateway\Command\InitializeCommand">
-    </virtualType>
-    <virtualType name="OPWechatPayInitializeCommand" type="Oceanpayment\Payment\Gateway\Command\InitializeCommand">
-    </virtualType>
-    <virtualType name="OPAlipayInitializeCommand" type="Oceanpayment\Payment\Gateway\Command\InitializeCommand">
-    </virtualType>
-
-
-    <!-- ========================================================================
-         Section 7.5: Refund Command - 退款命令
-          所有支付方式共享的退款命令，执行退款请求→传输→处理流程
-          退款使用独立的 TransferFactory（指向退款 API 端点）和独立的 Builder/Handler
-          ======================================================================== -->
-
-    <!-- 退款请求构建器：构建退款 API 所需的参数（含退款签名） -->
-    <virtualType name="OPRefundRequest" type="Magento\Payment\Gateway\Request\BuilderComposite">
-        <arguments>
-            <argument name="builders" xsi:type="array">
-                <!-- 退款参数构建：account, terminal, order_number, refund_amount, signValue 等 -->
-                <item name="refund" xsi:type="string">Oceanpayment\Payment\Gateway\Request\Builder\RefundBuilder</item>
-            </argument>
-        </arguments>
-    </virtualType>
-
-    <!-- 退款响应处理器：处理退款 API 返回结果 -->
-    <virtualType name="OPRefundResponseHandler" type="Magento\Payment\Gateway\Response\HandlerChain">
-        <arguments>
-            <argument name="handlers" xsi:type="array">
-                <!-- 解析退款响应，添加退款交易记录和订单备注 -->
-                <item name="refund" xsi:type="string">Oceanpayment\Payment\Gateway\Response\RefundHandler</item>
-            </argument>
-        </arguments>
-    </virtualType>
-
-    <!-- 退款命令：组装退款请求→传输→处理流程 -->
-    <virtualType name="OPRefundCommand" type="Magento\Payment\Gateway\Command\GatewayCommand">
-        <arguments>
-            <!-- 退款请求参数构建器 -->
-            <argument name="requestBuilder" xsi:type="object">OPRefundRequest</argument>
-            <!-- 退款 HTTP 传输工厂：将退款请求数据封装为 HTTP 传输对象（指向退款 API 端点） -->
-            <argument name="transferFactory" xsi:type="object">Oceanpayment\Payment\Gateway\Http\RefundTransferFactory</argument>
-            <!-- HTTP 客户端：执行实际的退款 API 调用 -->
-            <argument name="client" xsi:type="object">Oceanpayment\Payment\Gateway\Http\Client</argument>
-            <!-- 退款响应处理器链：解析退款 API 返回结果 -->
-            <argument name="handler" xsi:type="object">OPRefundResponseHandler</argument>
-            <!-- 退款签名验证器：验证退款 API 响应签名 -->
-            <argument name="validator" xsi:type="object">Oceanpayment\Payment\Gateway\Validator\RefundSignatureValidator</argument>
-        </arguments>
     </virtualType>
 
     <!-- ========================================================================
-         Section 7: Command Pool - 每种支付方式的命令池
-         每个命令池注册 "initialize" 和 "refund" 命令
+         Section 6: Command Pool - 每种支付方式的命令池
+         嵌入式（CC/ApplePay/GooglePay）: authorize=NullCommand, capture=NullCommand
          ======================================================================== -->
 
-    <!-- Credit Card 命令池（嵌入式模式：sale 代替 initialize + capture） -->
+    <!-- Credit Card 命令池（嵌入式） -->
     <virtualType name="OPCreditCardCommandPool" type="Magento\Payment\Gateway\Command\CommandPool">
         <arguments>
             <argument name="commands" xsi:type="array">
-                <item name="authorize" xsi:type="string">Magento\Payment\Gateway\Command\NullCommand</item>
-                 <item name="capture" xsi:type="string">Magento\Payment\Gateway\Command\NullCommand</item>
-                <item name="refund" xsi:type="string">OPRefundCommand</item>
+                <item name="authorize" xsi:type="string">OPEmbeddedCaptureCommand</item>
             </argument>
         </arguments>
     </virtualType>
 
-    <!-- Apple Pay 命令池 -->
+    <!-- Apple Pay 命令池（嵌入式） -->
     <virtualType name="OPApplePayCommandPool" type="Magento\Payment\Gateway\Command\CommandPool">
         <arguments>
             <argument name="commands" xsi:type="array">
-                <item name="initialize" xsi:type="string">OPApplePayInitializeCommand</item>
-                <item name="capture" xsi:type="string">Oceanpayment\Payment\Gateway\Command\SaleCommand</item>
-                <item name="refund" xsi:type="string">OPRefundCommand</item>
+                <item name="authorize" xsi:type="string">OPEmbeddedCaptureCommand</item>
             </argument>
         </arguments>
     </virtualType>
 
-    <!-- Google Pay 命令池 -->
+    <!-- Google Pay 命令池（嵌入式） -->
     <virtualType name="OPGooglePayCommandPool" type="Magento\Payment\Gateway\Command\CommandPool">
         <arguments>
             <argument name="commands" xsi:type="array">
-                <item name="initialize" xsi:type="string">OPGooglePayInitializeCommand</item>
-                <item name="capture" xsi:type="string">Oceanpayment\Payment\Gateway\Command\SaleCommand</item>
-                <item name="refund" xsi:type="string">OPRefundCommand</item>
+                <item name="authorize" xsi:type="string">OPEmbeddedCaptureCommand</item>
             </argument>
         </arguments>
     </virtualType>
-
-    <!-- WeChat Pay 命令池 -->
-    <virtualType name="OPWechatPayCommandPool" type="Magento\Payment\Gateway\Command\CommandPool">
-        <arguments>
-            <argument name="commands" xsi:type="array">
-                <item name="initialize" xsi:type="string">OPWechatPayInitializeCommand</item>
-                <item name="capture" xsi:type="string">Oceanpayment\Payment\Gateway\Command\SaleCommand</item>
-                <item name="refund" xsi:type="string">OPRefundCommand</item>
-            </argument>
-        </arguments>
-    </virtualType>
-
-    <!-- Alipay 命令池 -->
-    <virtualType name="OPAlipayCommandPool" type="Magento\Payment\Gateway\Command\CommandPool">
-        <arguments>
-            <argument name="commands" xsi:type="array">
-                <item name="initialize" xsi:type="string">OPAlipayInitializeCommand</item>
-                <item name="capture" xsi:type="string">Oceanpayment\Payment\Gateway\Command\SaleCommand</item>
-                <item name="refund" xsi:type="string">OPRefundCommand</item>
-            </argument>
-        </arguments>
-    </virtualType>
-
 
     <!-- ========================================================================
-         Section 9: Payment Facade - 每种支付方式的门面适配器
-         这是 Magento 2 Payment Gateway 的核心入口，将所有组件组装为可用的支付方法实例。
-         每种支付方式拥有独立的 code / valueHandlerPool / validatorPool / commandPool。
+         Section 7: Payment Facade
          ======================================================================== -->
-
-    <!-- Credit Card Facade -->
     <virtualType name="OPCreditCardFacade" type="Magento\Payment\Model\Method\Adapter">
         <arguments>
             <argument name="code" xsi:type="const">Oceanpayment\Payment\Model\Ui\ConfigProvider::CODE_CREDITCARD</argument>
@@ -408,7 +190,6 @@
         </arguments>
     </virtualType>
 
-    <!-- Apple Pay Facade -->
     <virtualType name="OPApplePayFacade" type="Magento\Payment\Model\Method\Adapter">
         <arguments>
             <argument name="code" xsi:type="const">Oceanpayment\Payment\Model\Ui\ConfigProvider::CODE_APPLEPAY</argument>
@@ -420,7 +201,6 @@
         </arguments>
     </virtualType>
 
-    <!-- Google Pay Facade -->
     <virtualType name="OPGooglePayFacade" type="Magento\Payment\Model\Method\Adapter">
         <arguments>
             <argument name="code" xsi:type="const">Oceanpayment\Payment\Model\Ui\ConfigProvider::CODE_GOOGLEPAY</argument>
@@ -432,49 +212,25 @@
         </arguments>
     </virtualType>
 
-    <!-- WeChat Pay Facade -->
-    <virtualType name="OPWechatPayFacade" type="Magento\Payment\Model\Method\Adapter">
-        <arguments>
-            <argument name="code" xsi:type="const">Oceanpayment\Payment\Model\Ui\ConfigProvider::CODE_WECHATPAY</argument>
-            <argument name="formBlockType" xsi:type="string">Magento\Payment\Block\Form</argument>
-            <argument name="infoBlockType" xsi:type="string">Oceanpayment\Payment\Block\Info</argument>
-            <argument name="valueHandlerPool" xsi:type="object">OPWechatPayValueHandlerPool</argument>
-            <argument name="validatorPool" xsi:type="object">OPWechatPayValidatorPool</argument>
-            <argument name="commandPool" xsi:type="object">OPWechatPayCommandPool</argument>
-        </arguments>
-    </virtualType>
-
-    <!-- Alipay Facade -->
-    <virtualType name="OPAlipayFacade" type="Magento\Payment\Model\Method\Adapter">
-        <arguments>
-            <argument name="code" xsi:type="const">Oceanpayment\Payment\Model\Ui\ConfigProvider::CODE_ALIPAY</argument>
-            <argument name="formBlockType" xsi:type="string">Magento\Payment\Block\Form</argument>
-            <argument name="infoBlockType" xsi:type="string">Oceanpayment\Payment\Block\Info</argument>
-            <argument name="valueHandlerPool" xsi:type="object">OPAlipayValueHandlerPool</argument>
-            <argument name="validatorPool" xsi:type="object">OPAlipayValidatorPool</argument>
-            <argument name="commandPool" xsi:type="object">OPAlipayCommandPool</argument>
-        </arguments>
-    </virtualType>
-
+    <!-- ========================================================================
+         Section 8: AuthorizeCommand 已移除
+         原全局替换 AuthorizeOperation 的 stateCommand 改为事件观察者方式：
+         PaymentPlaceEndObserver 监听 sales_order_payment_place_end
+         ======================================================================== -->
 
     <!-- ========================================================================
-         Section 9.5: ConfigProvider 注入配置
-         为 ConfigProvider 注入5个支付方式的 Config 虚拟类型
+         Section 9: ConfigProvider 注入配置（仅嵌入式3种）
          ======================================================================== -->
     <type name="Oceanpayment\Payment\Model\Ui\ConfigProvider">
         <arguments>
             <argument name="creditCardConfig" xsi:type="object">OPCreditCardConfig</argument>
             <argument name="applePayConfig" xsi:type="object">OPApplePayConfig</argument>
             <argument name="googlePayConfig" xsi:type="object">OPGooglePayConfig</argument>
-            <argument name="wechatPayConfig" xsi:type="object">OPWechatPayConfig</argument>
-            <argument name="alipayConfig" xsi:type="object">OPAlipayConfig</argument>
-
         </arguments>
     </type>
 
     <!-- ========================================================================
-         Section 9: Web API 接口绑定
-         将 NotificationInterface 和 PlacePayInterface 绑定到实现类
+         Section 10: Web API 接口绑定
          ======================================================================== -->
     <preference for="Oceanpayment\Payment\Api\NotificationInterface"
                 type="Oceanpayment\Payment\Model\Notification" />
@@ -482,7 +238,7 @@
     <preference for="Oceanpayment\Payment\Api\PlacePayInterface"
                 type="Oceanpayment\Payment\Model\PlacePay" />
 
-    <preference for="Oceanpayment\Payment\Api\PreOrderInterface"
-                type="Oceanpayment\Payment\Model\PreOrder" />
+    <preference for="Oceanpayment\Payment\Api\CheckoutDataInterface"
+                type="Oceanpayment\Payment\Model\CheckoutData" />
 
 </config>

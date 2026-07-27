@@ -1,12 +1,11 @@
 <?xml version="1.0"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
+        xsi:noNamespaceSchemaLocation="urn:magento:framework\Event/etc/events.xsd">
 
-    <!-- 嵌入式支付：将 additional_data 转存到 additional_information -->
-    <!--
-    <event name="payment_method_assign_data_oceanpayment_creditcard">
-        <observer name="oceanpayment_creditcard_assign_data"
-                  instance="Oceanpayment\Payment\Observer\AssignDataObserver" />
+    <!-- 下单完成后根据支付状态设置订单状态（替代自定义 AuthorizeCommand） -->
+    <event name="sales_order_payment_place_end">
+        <observer name="oceanpayment_payment_place_end"
+                  instance="Oceanpayment\Payment\Observer\PaymentPlaceEndObserver" />
     </event>
-    -->
+
 </config>

@@ -22,6 +22,7 @@ class Client implements ClientInterface
 {
     /**
      * 调试模式配置路径
+     * 注意：Oceanpayment_Payment 模块使用 oceanpayment_payment 配置段
      */
     private const PATH_DEBUG = 'payment/oceanpayment_payment/debug';
 
@@ -64,6 +65,8 @@ class Client implements ClientInterface
     }
 
     /**
+     * 发送 HTTP 请求并解析 XML 响应
+     *
      * @inheritDoc
      */
     public function placeRequest(TransferInterface $transferObject): array
@@ -72,6 +75,7 @@ class Client implements ClientInterface
         $body = $transferObject->getBody();
         $headers = $transferObject->getHeaders();
 
+        /* 调试模式下记录请求日志 */
         if ($this->isDebugMode()) {
             $this->logger->debug('[Oceanpayment] HTTP Request', [
                 'uri'     => $uri,
@@ -91,29 +95,10 @@ class Client implements ClientInterface
                 ),
             ];
 
-            /* /pay 端点禁用自动跟随重定向，捕获 302 Location */
-            if (str_contains($uri, '/gateway/service/pay')) {
-                $options['allow_redirects'] = false;
-            }
-
             $response = $this->httpClient->request('POST', $uri, $options);
-            $statusCode = $response->getStatusCode();
-
-            /* 302 重定向：返回 Location 头（自动重定向模式） */
-            if ($statusCode === 302 || $statusCode === 301) {
-                $location = $response->getHeaderLine('Location');
-
-                if ($this->isDebugMode()) {
-                    $this->logger->debug('[Oceanpayment] HTTP 302 Redirect', [
-                        'location' => $location,
-                    ]);
-                }
-
-                return ['redirect_url' => $location];
-            }
-
             $responseBody = (string) $response->getBody();
 
+            /* 调试模式下记录响应日志 */
             if ($this->isDebugMode()) {
                 $this->logger->debug('[Oceanpayment] HTTP Response', [
                     'response' => $responseBody,
@@ -134,8 +119,10 @@ class Client implements ClientInterface
     }
 
     /**
-     * @param array $body
-     * @return array
+     * 脱敏敏感数据（用于日志）
+     *
+     * @param array $body 请求体
+     * @return array 脱敏后的请求体
      */
     private function maskSensitiveData(array $body): array
     {

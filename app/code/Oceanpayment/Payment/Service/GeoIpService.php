@@ -109,8 +109,7 @@ class GeoIpService
     /**
      * 根据 IP 地址查询城市名称
      *
-     * 仅 GeoLite2-City.mmdb 包含城市信息，
-     * Country 库无法提供城市数据。
+     * 仅 GeoLite2-City.mmdb 包含城市信息
      *
      * @param string $ipAddress 客户端 IP 地址
      * @return string|null 城市名称，查询失败返回 null
@@ -137,7 +136,7 @@ class GeoIpService
     /**
      * 根据 IP 地址查询省/州 ISO 代码
      *
-     * 仅 GeoLite2-City.mmdb 包含省州信息。
+     * 仅 GeoLite2-City.mmdb 包含省州信息
      *
      * @param string $ipAddress 客户端 IP 地址
      * @return string|null 省/州 ISO 代码（如 CA, NY），查询失败返回 null

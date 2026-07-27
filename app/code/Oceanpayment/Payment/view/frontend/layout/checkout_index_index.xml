@@ -37,14 +37,6 @@
                                                                         <item name="oceanpayment_googlepay" xsi:type="array">
                                                                             <item name="isBillingAddressRequired" xsi:type="boolean">true</item>
                                                                         </item>
-                                                                        <!-- WeChat Pay 支付方式 -->
-                                                                        <item name="oceanpayment_wechatpay" xsi:type="array">
-                                                                            <item name="isBillingAddressRequired" xsi:type="boolean">true</item>
-                                                                        </item>
-                                                                        <!-- Alipay 支付方式 -->
-                                                                        <item name="oceanpayment_alipay" xsi:type="array">
-                                                                            <item name="isBillingAddressRequired" xsi:type="boolean">true</item>
-                                                                        </item>
 
                                                                     </item>
                                                                 </item>

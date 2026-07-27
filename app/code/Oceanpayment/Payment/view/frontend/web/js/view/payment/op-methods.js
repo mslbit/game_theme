@@ -1,9 +1,10 @@
 /**
  * Oceanpayment 支付方式注册组件
  *
- * 将5种 Oceanpayment 支付方式注册到 Magento Checkout 的渲染器列表中。
- * Credit Card 在嵌入式模式下使用专用渲染器（credit-card-embedded-render），
- * 其他支付方式及 Credit Card 托管模式使用通用渲染器（op-renderer）。
+ * 仅注册嵌入式支付方式：
+ * - 嵌入式 CC：使用 credit-card-embedded-render（iframe 模式）
+ * - 嵌入式 ApplePay：使用 applepay-embedded-render（SDK 按钮模式）
+ * - 嵌入式 GooglePay：使用 googlepay-embedded-render（SDK 按钮模式）
  */
 define(
     [
@@ -16,33 +17,22 @@ define(
     ) {
         'use strict';
 
-        var defaultComponent = 'Oceanpayment_Payment/js/view/payment/method-renderer/op-renderer';
-        var embeddedComponent = 'Oceanpayment_Payment/js/view/payment/method-renderer/credit-card-embedded-render';
-
-        // 嵌入式模式：Credit Card 使用专用渲染器
-        var isEmbedded = window.checkoutConfig.payment.oceanpayment_payment
-            && window.checkoutConfig.payment.oceanpayment_payment.mode === 'embedded';
+        var ccComponent = 'Oceanpayment_Payment/js/view/payment/method-renderer/credit-card-embedded-render';
+        var applePayComponent = 'Oceanpayment_Payment/js/view/payment/method-renderer/applepay-embedded-render';
+        var googlePayComponent = 'Oceanpayment_Payment/js/view/payment/method-renderer/googlepay-embedded-render';
 
         rendererList.push(
             {
                 type: 'oceanpayment_creditcard',
-                component: isEmbedded ? embeddedComponent : defaultComponent
+                component: ccComponent
             },
             {
                 type: 'oceanpayment_applepay',
-                component: defaultComponent
+                component: applePayComponent
             },
             {
                 type: 'oceanpayment_googlepay',
-                component: defaultComponent
-            },
-            {
-                type: 'oceanpayment_wechatpay',
-                component: defaultComponent
-            },
-            {
-                type: 'oceanpayment_alipay',
-                component: defaultComponent
+                component: googlePayComponent
             }
         );
 

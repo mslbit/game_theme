@@ -3,11 +3,12 @@ declare(strict_types=1);
 
 namespace Oceanpayment\Payment\Gateway\Request\Builder;
 
+use Magento\Payment\Gateway\Helper\SubjectReader;
 use Magento\Payment\Gateway\Request\BuilderInterface;
-use Magento\Payment\Gateway\Data\PaymentDataObjectInterface;
 use Magento\Framework\App\RequestInterface;
 use Oceanpayment\Payment\Gateway\Helper\SignatureHelper;
 use Oceanpayment\Payment\Model\Ui\ConfigProvider;
+use Magento\Framework\Exception\LocalizedException;
 
 /**
  * Oceanpayment 订单信息构建器
@@ -17,10 +18,14 @@ use Oceanpayment\Payment\Model\Ui\ConfigProvider;
  * - order_currency: 订单币种
  * - order_amount: 订单金额（保留 2 位小数）
  * - order_notes: 订单备注（默认为空）
- * - methods: Oceanpayment 交易方法标识（如 Credit Card、Alipay_Web）
+ * - methods: Oceanpayment 交易方法标识（如 Credit Card、ApplePay）
  * - backUrl: 用户支付完成后返回商城的 URL
  * - noticeUrl: Oceanpayment 异步通知回调 URL
  * - pages: 页面类型标识（0=PC, 1=移动端）
+ * - productNum: 商品数量
+ * - productName: 商品名称（多个用逗号分隔）
+ * - productSku: 商品 SKU（多个用逗号分隔）
+ * - productPrice: 商品单价（取第一个商品价格）
  */
 class OrderBuilder implements BuilderInterface
 {
@@ -43,9 +48,6 @@ class OrderBuilder implements BuilderInterface
         ConfigProvider::CODE_CREDITCARD  => 'Credit Card',
         ConfigProvider::CODE_APPLEPAY    => 'ApplePay',
         ConfigProvider::CODE_GOOGLEPAY   => 'GooglePay',
-        ConfigProvider::CODE_WECHATPAY   => 'WechatPay_Web',
-        ConfigProvider::CODE_ALIPAY      => 'Alipay_Web',
-
     ];
 
     /**
@@ -81,19 +83,22 @@ class OrderBuilder implements BuilderInterface
     public function build(array $buildSubject): array
     {
         /* 从构建参数中提取 PaymentDataObject */
-        $paymentDO = $this->readPayment($buildSubject);
+        $paymentDO = SubjectReader::readPayment($buildSubject);
         $order = $paymentDO->getOrder();
         $payment = $paymentDO->getPayment();
 
+        $amount = SubjectReader::readAmount($buildSubject);
+
         /* 从 map 获取 Oceanpayment methods 标识符 */
         $methodCode = $payment->getMethod();
-        $methods = self::METHOD_MAP[$methodCode] ?? 'Credit Card';
+        $methods = self::METHOD_MAP[$methodCode] ?? '';
 
-        /* 微信/支付宝移动端场景切换：_Web → _Wap（信用卡/ApplePay/GooglePay 无后缀不受影响） */
-        $pageType = $this->detectPageType();
-        if ($pageType === self::PAGES_MOBILE && str_ends_with($methods, '_Web')) {
-            $methods = substr($methods, 0, -4) . '_Wap';
+        if (empty($methods)) {
+            throw new LocalizedException(__('method is miss'));
         }
+
+        /* 检测页面类型（PC/移动端） */
+        $pageType = $this->detectPageType();
 
         return [
             /* 订单号：使用 increment_id 确保唯一性和可追溯性 */
@@ -103,12 +108,12 @@ class OrderBuilder implements BuilderInterface
             'order_currency' => $order->getCurrencyCode(),
 
             /* 订单金额：格式化为 2 位小数，符合 Oceanpayment 金额规范 */
-            'order_amount'   => number_format((float) $order->getGrandTotalAmount(), 2, '.', ''),
+            'order_amount'   => number_format((float) $amount, 2, '.', ''),
 
             /* 订单备注：预留字段，当前为空 */
             'order_notes'    => '',
 
-            /* 交易方法：从 map 查找，根据页面类型动态切换 _Web/_Wap */
+            /* 交易方法：从 map 查找 */
             'methods'        => $methods,
 
             /* 支付完成返回 URL：由 SignatureHelper 统一管理 */
@@ -141,21 +146,5 @@ class OrderBuilder implements BuilderInterface
         }
 
         return self::PAGES_PC;
-    }
-
-    /**
-     * 从构建参数中读取 PaymentDataObject
-     *
-     * @param array $buildSubject 构建参数
-     * @return PaymentDataObjectInterface
-     * @throws \InvalidArgumentException
-     */
-    private function readPayment(array $buildSubject): PaymentDataObjectInterface
-    {
-        if (!isset($buildSubject['payment']) || !$buildSubject['payment'] instanceof PaymentDataObjectInterface) {
-            throw new \InvalidArgumentException('Payment data object should be provided');
-        }
-
-        return $buildSubject['payment'];
     }
 }

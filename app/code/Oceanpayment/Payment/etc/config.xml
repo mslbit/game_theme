@@ -3,8 +3,8 @@
 /**
  * Oceanpayment Payment Module - Default Configuration
  *
- * 定义 5 种支付方式的默认配置及通用 Oceanpayment 网关参数
- * 每种支付方式对应一个虚拟类型 Facade（在 di.xml 中声明）
+ * 嵌入式支付（CC/ApplePay/GooglePay）：payment_action=authorize
+ * authorize 阶段由 NullCommand 跳过，回调/通知确认后由 PaymentSuccessService 处理
  */
 -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -12,28 +12,23 @@
     <default>
 
         <payment>
-            <!-- ============================== -->
-            <!-- Oceanpayment 通用网关配置       -->
-            <!-- ============================== -->
+            <!-- Oceanpayment 通用网关配置（oceanpayment_payment 配置段） -->
             <oceanpayment_payment>
-                <mode>embedded</mode>
                 <environment>sandbox</environment>
                 <debug>0</debug>
                 <sandbox_account/>
                 <sandbox_terminal/>
                 <sandbox_securecode backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
-
                 <sandbox_gateway_url>https://test-secure.oceanpayment.com</sandbox_gateway_url>
                 <production_account/>
                 <production_terminal/>
                 <production_securecode backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
-
                 <production_gateway_url>https://secure.oceanpayment.com</production_gateway_url>
+                <notification_ip_whitelist/>
+                <notification_ip_allow_all>1</notification_ip_allow_all>
             </oceanpayment_payment>
 
-            <!-- ============================== -->
-            <!-- 支付方式：Credit Card           -->
-            <!-- ============================== -->
+            <!-- Credit Card（嵌入式） -->
             <oceanpayment_creditcard>
                 <model>OPCreditCardFacade</model>
                 <group>oceanpayment</group>
@@ -44,11 +39,11 @@
                 <can_authorize>1</can_authorize>
                 <can_capture>1</can_capture>
                 <can_void>1</can_void>
-                <can_refund>1</can_refund>
-                <can_sale>1</can_sale>
+                <can_refund>0</can_refund>
+                <can_sale>0</can_sale>
                 <can_initialize>0</can_initialize>
                 <active>0</active>
-                <order_status>processing</order_status>
+                <order_status>pending_payment</order_status>
                 <payment_action>authorize</payment_action>
                 <allowspecific>0</allowspecific>
                 <specificcountry/>
@@ -57,9 +52,7 @@
                 <public_key/>
             </oceanpayment_creditcard>
 
-            <!-- ============================== -->
-            <!-- 支付方式：Apple Pay             -->
-            <!-- ============================== -->
+            <!-- Apple Pay（嵌入式） -->
             <oceanpayment_applepay>
                 <model>OPApplePayFacade</model>
                 <group>oceanpayment</group>
@@ -70,11 +63,12 @@
                 <can_authorize>1</can_authorize>
                 <can_capture>1</can_capture>
                 <can_void>1</can_void>
-                <can_refund>1</can_refund>
-                <can_initialize>1</can_initialize>
+                <can_refund>0</can_refund>
+                <can_sale>0</can_sale>
+                <can_initialize>0</can_initialize>
                 <active>0</active>
                 <order_status>pending_payment</order_status>
-                <payment_action>authorize_capture</payment_action>
+                <payment_action>authorize</payment_action>
                 <allowspecific>0</allowspecific>
                 <specificcountry/>
                 <sort_order>20</sort_order>
@@ -82,9 +76,7 @@
                 <merchant_identifier/>
             </oceanpayment_applepay>
 
-            <!-- ============================== -->
-            <!-- 支付方式：Google Pay            -->
-            <!-- ============================== -->
+            <!-- Google Pay（嵌入式） -->
             <oceanpayment_googlepay>
                 <model>OPGooglePayFacade</model>
                 <group>oceanpayment</group>
@@ -95,11 +87,12 @@
                 <can_authorize>1</can_authorize>
                 <can_capture>1</can_capture>
                 <can_void>1</can_void>
-                <can_refund>1</can_refund>
-                <can_initialize>1</can_initialize>
+                <can_refund>0</can_refund>
+                <can_sale>0</can_sale>
+                <can_initialize>0</can_initialize>
                 <active>0</active>
                 <order_status>pending_payment</order_status>
-                <payment_action>authorize_capture</payment_action>
+                <payment_action>authorize</payment_action>
                 <allowspecific>0</allowspecific>
                 <specificcountry/>
                 <sort_order>30</sort_order>
@@ -107,54 +100,6 @@
                 <merchant_id/>
                 <gateway_merchant_id/>
             </oceanpayment_googlepay>
-
-            <!-- ============================== -->
-            <!-- 支付方式：WeChat Pay            -->
-            <!-- ============================== -->
-            <oceanpayment_wechatpay>
-                <model>OPWechatPayFacade</model>
-                <group>oceanpayment</group>
-                <title>WeChat Pay</title>
-                <is_gateway>1</is_gateway>
-                <can_use_checkout>1</can_use_checkout>
-                <can_use_internal>0</can_use_internal>
-                <can_authorize>1</can_authorize>
-                <can_capture>1</can_capture>
-                <can_void>1</can_void>
-                <can_refund>1</can_refund>
-                <can_initialize>1</can_initialize>
-                <active>0</active>
-                <order_status>pending_payment</order_status>
-                <payment_action>authorize_capture</payment_action>
-                <allowspecific>0</allowspecific>
-                <specificcountry/>
-                <sort_order>40</sort_order>
-                <methods>WechatPay_Web</methods>
-            </oceanpayment_wechatpay>
-
-            <!-- ============================== -->
-            <!-- 支付方式：Alipay                -->
-            <!-- ============================== -->
-            <oceanpayment_alipay>
-                <model>OPAlipayFacade</model>
-                <group>oceanpayment</group>
-                <title>Alipay</title>
-                <is_gateway>1</is_gateway>
-                <can_use_checkout>1</can_use_checkout>
-                <can_use_internal>0</can_use_internal>
-                <can_authorize>1</can_authorize>
-                <can_capture>1</can_capture>
-                <can_void>1</can_void>
-                <can_refund>1</can_refund>
-                <can_initialize>1</can_initialize>
-                <active>0</active>
-                <order_status>pending_payment</order_status>
-                <payment_action>authorize_capture</payment_action>
-                <allowspecific>0</allowspecific>
-                <specificcountry/>
-                <sort_order>50</sort_order>
-                <methods>Alipay_Web</methods>
-            </oceanpayment_alipay>
 
         </payment>
 

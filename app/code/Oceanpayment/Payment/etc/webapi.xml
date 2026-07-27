@@ -1,7 +1,18 @@
 <?xml version="1.0"?>
+<!--
+/**
+ * Oceanpayment Payment Module - Web API Routes
+ *
+ * 路由前缀：/V1/oceanpayment/
+ * - POST /V1/oceanpayment/notice - 异步通知回调
+ * - GET  /V1/oceanpayment/:quoteId/place-pay - 获取 pay_url
+ * - POST /V1/oceanpayment/:quoteId/:methodCode/checkout-data - 获取嵌入式 checkout 数据
+ */
+-->
 <routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Webapi:etc/webapi.xsd">
 
+    <!-- Oceanpayment 异步通知回调 -->
     <route url="/V1/oceanpayment/notice" method="POST">
         <service class="Oceanpayment\Payment\Api\NotificationInterface" method="handle"/>
         <resources>
@@ -9,39 +20,20 @@
         </resources>
     </route>
 
-    <route url="/V1/oceanpayment/pre-order" method="POST">
-        <service class="Oceanpayment\Payment\Api\PreOrderInterface" method="preOrder"/>
-        <resources>
-            <resource ref="self"/>
-        </resources>
-        <data>
-            <parameter name="cartId" force="true">%cart_id%</parameter>
-        </data>
-    </route>
-
-    <route url="/V1/guest-oceanpayment/:cartId/pre-order" method="POST">
-        <service class="Oceanpayment\Payment\Api\PreOrderInterface" method="guestPreOrder"/>
+    <!-- Oceanpayment 获取 pay_url（3D验证跳转地址，使用 quoteId 避免暴露 orderId） -->
+    <route url="/V1/oceanpayment/:quoteId/place-pay" method="GET">
+        <service class="Oceanpayment\Payment\Api\PlacePayInterface" method="getPay"/>
         <resources>
             <resource ref="anonymous"/>
         </resources>
     </route>
 
-    <route url="/V1/oceanpayment/place-pay" method="POST">
-        <service class="Oceanpayment\Payment\Api\PlacePayInterface" method="placePay"/>
-        <resources>
-            <resource ref="self"/>
-        </resources>
-        <data>
-            <parameter name="cartId" force="true">%cart_id%</parameter>
-        </data>
-    </route>
-
-    <route url="/V1/guest-oceanpayment/:cartId/place-pay" method="POST">
-        <service class="Oceanpayment\Payment\Api\PlacePayInterface" method="guestPlacePay"/>
+    <!-- Oceanpayment 嵌入式支付 checkout 数据（后端组装敏感字段，前端直接传给 SDK） -->
+    <route url="/V1/oceanpayment/:quoteId/:methodCode/checkout-data" method="POST">
+        <service class="Oceanpayment\Payment\Api\CheckoutDataInterface" method="getCheckoutData"/>
         <resources>
             <resource ref="anonymous"/>
         </resources>
     </route>
-
 
 </routes>

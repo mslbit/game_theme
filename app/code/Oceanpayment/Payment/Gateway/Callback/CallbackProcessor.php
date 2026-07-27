@@ -15,7 +15,7 @@ use Magento\Sales\Model\Order\Payment\Transaction as PaymentTransaction;
 use Magento\Sales\Model\Service\InvoiceService;
 use Magento\Store\Model\ScopeInterface;
 use Oceanpayment\Payment\Gateway\Helper\SignatureHelper;
-
+use Oceanpayment\Payment\Gateway\Service\PaymentSuccessService;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -78,12 +78,13 @@ class CallbackProcessor
      * 已处理的订单状态列表
      */
     private const PROCESSED_STATES = [
-       // Order::STATE_PROCESSING,
+        Order::STATE_PROCESSING,
         Order::STATE_COMPLETE,
     ];
 
     /**
      * 共享网关配置的 XML 路径前缀
+     * 注意：Oceanpayment_Payment 模块使用 oceanpayment_payment 配置段
      */
     private const SHARED_CONFIG_PREFIX = 'payment/oceanpayment_payment';
 
@@ -133,6 +134,11 @@ class CallbackProcessor
     private EventManager $eventManager;
 
     /**
+     * @var PaymentSuccessService 支付成功处理服务
+     */
+    private PaymentSuccessService $paymentSuccessService;
+
+    /**
      * @param LoggerInterface $logger
      * @param OrderRepositoryInterface $orderRepository
      * @param SearchCriteriaBuilder $searchCriteriaBuilder
@@ -141,6 +147,7 @@ class CallbackProcessor
      * @param OrderSender $orderSender
      * @param DbTransaction $dbTransaction
      * @param SignatureHelper $signatureHelper
+     * @param PaymentSuccessService $paymentSuccessService
      * @param EventManager $eventManager
      */
     public function __construct(
@@ -152,6 +159,7 @@ class CallbackProcessor
         OrderSender $orderSender,
         DbTransaction $dbTransaction,
         SignatureHelper $signatureHelper,
+        PaymentSuccessService $paymentSuccessService,
         EventManager $eventManager
     ) {
         $this->logger = $logger;
@@ -163,6 +171,7 @@ class CallbackProcessor
         $this->dbTransaction = $dbTransaction;
         $this->signatureHelper = $signatureHelper;
         $this->eventManager = $eventManager;
+        $this->paymentSuccessService = $paymentSuccessService;
     }
 
     /**
@@ -249,14 +258,16 @@ class CallbackProcessor
     {
         $paymentStatus = (int) ($params['payment_status'] ?? self::PAYMENT_STATUS_PENDING);
         $payment = $order->getPayment();
-        file_put_contents(BP.'/var/testf.log',$paymentStatus."\n",FILE_APPEND);
+
+        /* 先添加备注，确保各子方法 save 时备注已挂载 */
+        $this->addPaymentComment($order, $params, $paymentStatus, $source);
+
         switch ($paymentStatus) {
             case self::PAYMENT_STATUS_SUCCESS:
-                $this->processPaymentSuccess($order, $payment, $params, $source);
+                $this->paymentSuccessService->execute($order, $params);
                 break;
 
             case self::PAYMENT_STATUS_FAILED:
-                 file_put_contents(BP.'/var/testf.log','FAL'."\n",FILE_APPEND);
                 $this->processPaymentFailure($order, $payment, $params, $source);
                 break;
 
@@ -269,13 +280,6 @@ class CallbackProcessor
                 $this->processPaymentPending($order, $payment, $params, $source);
                 break;
         }
-
-        $this->addPaymentComment($order, $params, $paymentStatus, $source);
-
-       
-        $this->orderRepository->save($order);
-        
-      
     }
 
     /**
@@ -349,47 +353,10 @@ class CallbackProcessor
     }
 
     /**
-     * 处理支付成功
-     *
-     * @param OrderInterface $order
-     * @param \Magento\Sales\Api\Data\OrderPaymentInterface $payment
-     * @param array $params
-     * @param string $source
-     */
-    private function processPaymentSuccess(OrderInterface $order, $payment, array $params, string $source): void
-    {
-        $paymentId = $params['payment_id'] ?? '';
-        if (!empty($paymentId)) {
-            $payment->setTransactionId($paymentId);
-            $payment->setLastTransId($paymentId);
-        }
-
-        $payment->setAdditionalInformation('oceanpayment_payment_id', $paymentId);
-        $payment->setAdditionalInformation('oceanpayment_card_number', $params['card_number'] ?? '');
-        $payment->setAdditionalInformation('oceanpayment_auth_type', $params['payment_authType'] ?? '');
-
-        $payment->registerCaptureNotification($order->getTotalDue());
-
-        $this->sendOrderEmail($order);
-
-        $this->logger->info('[Oceanpayment] [{source}] Order #{incrementId} payment SUCCESS', [
-            'source' => $source,
-            'incrementId' => $order->getIncrementId(),
-        ]);
-     
-           /* 分发回调事件，供其他模块通过观察者模式监听 */
-        $this->eventManager->dispatch('oceanpayment_callback_after', [
-            'payment'        => $order->getPayment(),
-            'order'          => $order,
-            'callback_params' => $params,
-        ]);
-    }
-
-    /**
      * 处理支付失败
      *
      * @param OrderInterface $order
-     * @param \Magento\Sales\Api\Data\OrderPaymentInterface $payment
+     * @param \Magento\Sales\Api\Data\OrderPaymentInterface|null $payment
      * @param array $params
      * @param string $source
      */
@@ -399,6 +366,9 @@ class CallbackProcessor
         $order->setStatus(Order::STATE_CANCELED);
 
         $paymentId = $params['payment_id'] ?? '';
+        if (!$payment instanceof \Magento\Sales\Api\Data\OrderPaymentInterface) {
+            return;
+        }
         if (!empty($paymentId)) {
             $payment->setTransactionId($paymentId);
             $payment->addTransaction(PaymentTransaction::TYPE_VOID);
@@ -406,6 +376,8 @@ class CallbackProcessor
 
         $payment->setAdditionalInformation('oceanpayment_payment_id', $paymentId);
         $payment->setAdditionalInformation('oceanpayment_card_number', $params['card_number'] ?? '');
+
+        $this->orderRepository->save($order);
 
         $this->logger->info('[Oceanpayment] [{source}] Order #{incrementId} payment FAILED', [
             'source' => $source,
@@ -435,6 +407,8 @@ class CallbackProcessor
         $payment->setAdditionalInformation('oceanpayment_payment_id', $paymentId);
         $payment->setAdditionalInformation('oceanpayment_card_number', $params['card_number'] ?? '');
         $payment->setAdditionalInformation('oceanpayment_auth_type', $params['payment_authType'] ?? '');
+
+        $this->orderRepository->save($order);
 
         $this->logger->info('[Oceanpayment] [{source}] Order #{incrementId} payment PENDING (pre-auth)', [
             'source' => $source,
@@ -472,80 +446,12 @@ class CallbackProcessor
             . ' | Details: ' . ($params['payment_details'] ?? 'N/A')
         );
 
+        $this->orderRepository->save($order);
+
         $this->logger->warning('[Oceanpayment] [{source}] Order #{incrementId} HIGH RISK transaction', [
             'source' => $source,
             'incrementId' => $order->getIncrementId(),
         ]);
-    }
-
-    /**
-     * 发送订单确认邮件
-     *
-     * @param OrderInterface $order
-     */
-    private function sendOrderEmail(OrderInterface $order): void
-    {
-        try {
-            if (!$order->getEmailSent()) {
-                $this->orderSender->send($order);
-                $this->logger->info('[Oceanpayment] Order confirmation email sent for order #{incrementId}', [
-                    'incrementId' => $order->getIncrementId(),
-                ]);
-            }
-        } catch (\Exception $e) {
-            $this->logger->error('[Oceanpayment] Failed to send order email for #{incrementId}: {message}', [
-                'incrementId' => $order->getIncrementId(),
-                'message' => $e->getMessage(),
-            ]);
-        }
-    }
-
-    /**
-     * 创建发票
-     *
-     * @param OrderInterface $order
-     */
-    private function createInvoice(OrderInterface $order): void
-    {
-        try {
-            if (!$order->canInvoice()) {
-                $this->logger->debug('[Oceanpayment] Order #{incrementId} cannot be invoiced', [
-                    'incrementId' => $order->getIncrementId(),
-                ]);
-                return;
-            }
-
-            $payment = $order->getPayment();
-            if (!$payment || !$payment->getTransactionId()) {
-                $this->logger->error('[Oceanpayment] Cannot create invoice - payment transaction ID is missing', [
-                    'incrementId' => $order->getIncrementId(),
-                ]);
-                return;
-            }
-
-            $invoice = $this->invoiceService->prepareInvoice($order);
-            $invoice->setRequestedCaptureCase(\Magento\Sales\Model\Order\Invoice::CAPTURE_ONLINE);
-            $invoice->setTransactionId($payment->getTransactionId());
-            $invoice->register();
-
-            $invoice->getOrder()->setIsInProcess(true);
-
-            $this->dbTransaction
-                ->addObject($invoice)
-                ->addObject($invoice->getOrder())
-                ->save();
-
-            $this->logger->info('[Oceanpayment] Invoice #{invoiceIncrementId} created for order #{incrementId}', [
-                'invoiceIncrementId' => $invoice->getIncrementId(),
-                'incrementId' => $order->getIncrementId(),
-            ]);
-
-        } catch (\Exception $e) {
-            $this->logger->error('[Oceanpayment] Failed to create invoice for order #{incrementId}: {message}', [
-                'incrementId' => $order->getIncrementId(),
-                'message' => $e->getMessage(),
-            ]);
-        }
     }
 
     /**
@@ -577,7 +483,7 @@ class CallbackProcessor
             $params['payment_details'] ?? 'N/A'
         );
 
-        // 失败时附加 payment_solutions（Oceanpayment 返回的解决建议）
+        /* 失败时附加 payment_solutions（Oceanpayment 返回的解决建议） */
         if ($paymentStatus === self::PAYMENT_STATUS_FAILED && !empty($params['payment_solutions'])) {
             $comment .= ' | Solutions: ' . $params['payment_solutions'];
         }

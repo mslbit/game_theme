@@ -1,108 +1,205 @@
 /**
  * Oceanpayment 嵌入式信用卡支付渲染器
  *
- * 流程（先下单再跳 3D，避免支付成功但下单失败无法回滚）：
- * 1. 用户在 iframe 输入卡号 → 回调存入 creditCardData
- * 2. 用户点击 Place Order → getPlaceOrderDeferredObject()
- *    - 无卡数据 → rejected
- *    - 有卡数据 → paycollectDataAction（后端 cURL 到 /gateway/direct/pay）
- *      → 支付成功/有 pay_url → 先 placeOrder 下单
- *        → 下单成功且有 pay_url → 302 跳转 3D
- *      → 支付失败 → rejected
+ * 混合模式流程：
+ * 1. Oceanpayment.init() 渲染 iframe，用户输入卡号
+ * 2. 用户点击 Place Order → getPlaceOrderDeferredObject() 被调用
+ *    → 调后端 API 获取 checkout 表单数据 → Oceanpayment.checkout(formData) 提交网关
+ *    → 返回不 resolve 的 deferred，阻止 Magento 默认 placeOrder 流程
+ * 3. 回调 oceanpaymentCallBack 返回结果：
+ *    - data.msg 存在 → 卡号错误，提示用户
+ *    - pay_url 存在（3D）→ 调 placeOrderAction 创建订单 → 跳转 pay_url
+ *    - pay_url 为空（非3D）→ 调 placeOrderAction 创建订单 → 跳转成功页
  */
 define([
     'jquery',
     'Magento_Checkout/js/view/payment/default',
-    'Magento_Checkout/js/action/place-order',
+    'Magento_Checkout/js/model/quote',
     'Magento_Checkout/js/model/full-screen-loader',
-    'Oceanpayment_Payment/js/action/paycollectData-action',
-    'Oceanpayment_Payment/js/oceanpayment',
-    'Oceanpayment_Payment/js/model/credit-card-data'
-], function ($, Component, placeOrderAction, loader, paycollectDataAction, Oceanpayment, creditCardData) {
+    'Magento_Checkout/js/action/place-order',
+    'Oceanpayment_Payment/js/action/get-checkout-data'
+], function ($, Component, quote, fullScreenLoader, placeOrderAction, getCheckoutData) {
 
     'use strict';
 
     return Component.extend({
+        redirectAfterPlaceOrder: false,
         defaults: {
             template: 'Oceanpayment_Payment/embedded/credit-card-payment'
         },
 
+        /**
+         * 初始化 Oceanpayment iframe 和全局回调
+         */
         opinputInit: function () {
             var self = this;
 
             setTimeout(function () {
-                var embeddedConfig = window.checkoutConfig.payment.oceanpayment_payment.embedded || {};
-                if (typeof Oceanpayment !== 'undefined' && typeof Oceanpayment.init === 'function') {
-                    Oceanpayment.init(
-                        embeddedConfig.is_sandbox || false,
-                        '',
-                        embeddedConfig.language || 'en',
-                        embeddedConfig.public_key || '',
-                        embeddedConfig.back_url || window.location.origin
-                    );
-                }
+                var methodConfig = (window.checkoutConfig.payment.oceanpayment_payment.methods || {})[self.getCode()] || {};
+                var embeddedConfig = methodConfig.embedded || {};
+                var sdkUrl = embeddedConfig.sdk_url || '';
 
-                window.oceanpaymentCallBack = function (data) {
-                    self.handlePaymentCallback(data);
-                };
-            }, 300);
-        },
-
-        handlePaymentCallback: function (data) {
-            if (typeof data === 'object' && data.card_data !== undefined) {
-                if (data.errorMsg) {
-                    this.messageContainer.addErrorMessage({message: data.errorMsg});
+                if (!sdkUrl) {
                     return;
                 }
 
-                this.isPlaceOrderActionAllowed(true);
+                /* 注册全局回调 */
+                window.oceanpaymentCallBack = function (data) {
+                    self.handlePaymentCallback(data);
+                };
 
-                creditCardData.set({
-                    card_data: data.card_data || '',
-                    payment_id: data.payment_id || '',
-                    card_number: data.card_number || '',
-                    auth_type: data.auth_type || ''
-                });
-            }
+                /* 动态加载官方 CC SDK */
+                var script = document.createElement('script');
+                script.src = sdkUrl;
+                script.async = true;
+                script.onload = function () {
+                    var retryCount = 0;
+                    var tryInit = function () {
+                        if (typeof Oceanpayment !== 'undefined') {
+                            Oceanpayment.init(
+                                embeddedConfig.is_sandbox || false,
+                                '',
+                                embeddedConfig.language || 'en'
+                            );
+                        } else if (retryCount < 10) {
+                            retryCount++;
+                            setTimeout(tryInit, 200);
+                        }
+                    };
+                    tryInit();
+                };
+                document.head.appendChild(script);
+            }, 300);
         },
 
+        /**
+         * SDK 回调处理
+         */
+        handlePaymentCallback: function (rawData) {
+            var self = this;
+
+            /* 解析回调数据：SDK 可能返回 XML 字符串或已解析的对象 */
+            var data = this._parseCallbackData(rawData);
+
+            if (!data) {
+                this.messageContainer.addErrorMessage({message: 'Payment callback data invalid'});
+                this.isPlaceOrderActionAllowed(true);
+                return;
+            }
+
+            /* 卡号校验错误 */
+            if (data.msg) {
+                this.messageContainer.addErrorMessage({message: data.msg});
+                this.isPlaceOrderActionAllowed(true);
+                return;
+            }
+
+            /* 支付失败且无 pay_url（非3D场景的失败） */
+            if (data.payment_status && parseInt(data.payment_status) !== 1 && !data.pay_url) {
+                var failMsg = data.payment_details || 'Payment failed';
+                this.messageContainer.addErrorMessage({message: failMsg});
+                this.isPlaceOrderActionAllowed(true);
+                return;
+            }
+
+            /* 网关已处理，现在需要创建 Magento 订单 */
+            fullScreenLoader.startLoader();
+              this.isPlaceOrderActionAllowed(false);//禁用下单按钮
+
+            $.when(placeOrderAction(this.getData(), this.messageContainer))
+                .done(function () {
+                    if (data.pay_url) {
+                        /* 3D 验证：跳转 pay_url */
+                        fullScreenLoader.stopLoader();
+                        window.location.replace(data.pay_url);
+                    } else {
+                        /* 非3D：跳转成功页 */
+                        fullScreenLoader.stopLoader();
+                        self.afterPlaceOrder();
+                        window.location.replace(
+                            window.checkoutConfig.defaultSuccessPageUrl
+                            || window.location.origin + '/checkout/onepage/success'
+                        );
+                    }
+                })
+                .fail(function () {
+                    fullScreenLoader.stopLoader();
+                    self.isPlaceOrderActionAllowed(true);
+                });
+        },
+
+        /**
+         * 解析回调数据
+         */
+        _parseCallbackData: function (rawData) {
+            if (!rawData) {
+                return null;
+            }
+
+            /* 已经是对象 */
+            if (typeof rawData === 'object') {
+                return rawData;
+            }
+
+            /* XML 字符串解析 */
+            if (typeof rawData === 'string') {
+                try {
+                    var parser = new DOMParser();
+                    var xmlDoc = parser.parseFromString(rawData, 'text/xml');
+                    var result = {};
+                    var children = xmlDoc.documentElement.children;
+
+                    for (var i = 0; i < children.length; i++) {
+                        result[children[i].tagName] = children[i].textContent;
+                    }
+
+                    return result;
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            return null;
+        },
+
+        /**
+         * Place Order 入口
+         *
+         * 返回不 resolve 的 deferred，等待回调处理
+         */
         getPlaceOrderDeferredObject: function () {
-            if (!creditCardData.hasCard()) {
+            var self = this;
+
+            if (typeof Oceanpayment === 'undefined') {
                 this.messageContainer.addErrorMessage({
-                    message: 'Please complete card information first'
+                    message: 'Payment system is loading, please wait...'
                 });
                 return $.Deferred().reject().promise();
             }
 
-            var self = this;
+            fullScreenLoader.startLoader();
+             this.isPlaceOrderActionAllowed(false);//禁用下单按钮
 
-            // 先调后端 API 发起支付，再下单，最后跳 3D
-            return paycollectDataAction(this.messageContainer).then(function (result) {
-
-                // 先 placeOrder 下单，确保订单创建成功
-                return $.when(
-                    placeOrderAction(self.getData(), self.messageContainer)
-                ).then(function () {
-                    // 下单成功，有 pay_url → 3D 验证跳转
-                    if (result.pay_url) {
-                        window.location.replace(result.pay_url);
-                        return $.Deferred().promise();
-                    }
-                    // 非 3D，支付成功，正常走 Magento 成功页跳转
+            /* 从后端获取 checkout 表单数据（含签名、key 等敏感字段） */
+            getCheckoutData(this.getCode(), this.messageContainer)
+                .done(function (formData) {
+                    fullScreenLoader.stopLoader();
+                    /* 调用 SDK.checkout()，由 iframe 提交到网关 */
+                    Oceanpayment.checkout(formData);
+                })
+                .fail(function () {
+                    fullScreenLoader.stopLoader();
+                    self.isPlaceOrderActionAllowed(true);
                 });
 
-            }, function (error) {
-                if (error && typeof error === 'string') {
-                    self.messageContainer.addErrorMessage({message: error});
-                }
-                return $.Deferred().reject().promise();
-            });
+            /* 返回不 resolve 的 deferred，等待回调处理 */
+            return $.Deferred().promise();
         },
 
         getData: function () {
             return {
                 method: this.item.method,
-                additional_data: creditCardData.get()
+                additional_data: {}
             };
         },
 

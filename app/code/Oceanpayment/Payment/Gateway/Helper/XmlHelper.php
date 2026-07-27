@@ -12,10 +12,10 @@ namespace Oceanpayment\Payment\Gateway\Helper;
 class XmlHelper
 {
     /**
-     * Parse XML string to associative array
+     * 解析 XML 字符串为关联数组
      *
-     * @param string $xmlString
-     * @return array
+     * @param string $xmlString XML 字符串
+     * @return array 关联数组
      * @throws \RuntimeException
      */
     public function parse(string $xmlString): array
@@ -28,8 +28,9 @@ class XmlHelper
 
         try {
             $dom = new \DOMDocument();
+            $dom->substituteEntities = false;
             
-            if (!$dom->loadXML($xmlString)) {
+            if (!$dom->loadXML($xmlString, LIBXML_NONET)) {
                 $errors = libxml_get_errors();
                 $errorMessages = array_map(static function (\LibXMLError $error) {
                     return trim($error->message);
@@ -41,7 +42,8 @@ class XmlHelper
                 );
             }
 
-            return $this->domToArray($dom->documentElement);
+            $parsed = $this->domToArray($dom->documentElement);
+            return is_array($parsed) ? $parsed : [];
 
         } finally {
             libxml_use_internal_errors($previousUseErrors);
@@ -49,9 +51,9 @@ class XmlHelper
     }
 
     /**
-     * Convert DOMElement to associative array
+     * 将 DOMElement 转换为关联数组
      *
-     * @param \DOMElement $element
+     * @param \DOMElement $element DOM 元素
      * @return array|string
      */
     private function domToArray(\DOMElement $element)
@@ -74,10 +76,10 @@ class XmlHelper
             }
         }
         
-        if (empty($result) && $element->nodeValue !== '') {
+        if (empty($result)) {
             return trim($element->nodeValue);
         }
-        
+
         return $result;
     }
 }

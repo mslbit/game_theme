@@ -16,6 +16,7 @@ use Magento\Payment\Block\ConfigurableInfo;
  * - oceanpayment_payment_id → Payment ID
  * - oceanpayment_card_number → Card Number
  * - oceanpayment_auth_type → Auth Type
+ * - oceanpayment_high_risk → High Risk
  */
 class Info extends ConfigurableInfo
 {
