@@ -43,9 +43,9 @@ class BillingConfigProvider implements ConfigProviderInterface
                 'street' => ['checkout street 123'],
                 'city' => 'Hong Kong',
                 'postcode' => '123456',
-                'country_id' => 'CN',
+                'country_id' => 'US',
                 'telephone' => '12345678',
-                'region' => 'CN-HK',
+                'region' => 'CA',
             ]
         ];
     }
