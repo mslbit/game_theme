@@ -254,7 +254,7 @@ class CheckoutData implements CheckoutDataInterface
                 'firstName' => $firstName,
                 'lastName'  => $lastName,
                 'email'     => $customerEmail,
-                'phone'     => $this->generateMaskedMobileNumber(),
+                'phone'     => $billingAddr['telephone'] ? $billingAddr['telephone'] : \Folix\SimpleCheckout\Model\BillingConfigProvider::generateMaskedMobileNumber(),
                 'country'   => $this->geoIpService->getCountryCode($clientIp) ?: self::DEFAULT_COUNTRY,
                 'state'     => $this->geoIpService->getRegionCode($clientIp) ?: self::DEFAULT_STATE,
                 'city'      => $this->geoIpService->getCity($clientIp) ?: self::DEFAULT_CITY,
@@ -274,7 +274,7 @@ class CheckoutData implements CheckoutDataInterface
         $email = $email ?: $customerEmail;
 
         $phone = trim((string) ($billingAddr['telephone'] ?? ''));
-        $phone = $phone ?: $this->generateMaskedMobileNumber();
+        $phone = $phone ?: \Folix\SimpleCheckout\Model\BillingConfigProvider::generateMaskedMobileNumber();
 
         $street = $billingAddr['street'] ?? [];
         if (is_array($street)) {
@@ -380,17 +380,7 @@ class CheckoutData implements CheckoutDataInterface
         return ucfirst($parts[1] ?? '');
     }
 
-    /**
-     * 生成脱敏手机号（与 CustomerBuilder 一致）
-     *
-     * @return string
-     */
-    private function generateMaskedMobileNumber(): string
-    {
-        $prefix = '1' . mt_rand(3, 9) . mt_rand(0, 9);
-        $suffix = sprintf('%04d', mt_rand(0, 9999));
-        return $prefix . '****' . $suffix;
-    }
+   
 
     /**
      * 构建商品名称列表

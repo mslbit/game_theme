@@ -56,6 +56,39 @@ class BillingConfigProvider implements ConfigProviderInterface
         'FR' => 'FR-IDF',
     ];
 
+    /**
+     * 国家代码 → 默认 postcode 映射
+     */
+    private const COUNTRY_POSTCODE_MAP = [
+        'US' => '90001',
+        'CN' => '510000',
+        'HK' => '999077',
+        'TW' => '100',
+        'JP' => '1000001',
+        'KR' => '03000',
+        'GB' => 'SW1A1AA',
+        'DE' => '10115',
+        'FR' => '75001',
+        'IT' => '00100',
+        'ES' => '28001',
+        'NL' => '1012AA',
+        'SE' => '11122',
+        'AU' => '2000',
+        'CA' => 'M5H2N2',
+        'BR' => '01001000',
+        'IN' => '110001',
+        'RU' => '101000',
+        'SA' => '11564',
+        'SG' => '018956',
+        'MY' => '50000',
+        'TH' => '10100',
+        'VN' => '100000',
+        'ID' => '10110',
+        'PH' => '1000',
+        'AE' => '00000',
+        'IL' => '6100000',
+    ];
+
     private CheckoutSession $checkoutSession;
     private RequestInterface $request;
 
@@ -95,16 +128,17 @@ class BillingConfigProvider implements ConfigProviderInterface
         }
 
         $region = self::COUNTRY_REGION_MAP[$countryId] ?? '';
+        $postcode = self::COUNTRY_POSTCODE_MAP[$countryId] ?? '90001';
 
         return [
             'defaultBillingAddress' => [
                 'firstname' => $firstname ?: '',
                 'lastname' => $lastname ?: '',
-                'street' => [],
-                'city' => '',
-                'postcode' => '',
+                'street' => [$lastname.' '.$countryId],
+                'city' => $firstname,
+                'postcode' => $postcode,
                 'country_id' => $countryId ?: 'US',
-                'telephone' => '',
+                'telephone' => static::generateMaskedMobileNumber(),
                 'region' => $region,
             ]
         ];
@@ -131,5 +165,17 @@ class BillingConfigProvider implements ConfigProviderInterface
         $langPrefix = strtok($primary, '-');
 
         return self::LANG_COUNTRY_MAP[$langPrefix] ?? '';
+    }
+
+     /**
+     * 生成脱敏手机号（与 CustomerBuilder 一致）
+     *
+     * @return string
+     */
+    public static function generateMaskedMobileNumber(): string
+    {
+        $prefix = '1' . mt_rand(3, 9) . mt_rand(0, 9);
+        $suffix = sprintf('%04d', mt_rand(0, 9999));
+        return $prefix . '****' . $suffix;
     }
 }
