@@ -57,9 +57,9 @@ class CheckoutData implements CheckoutDataInterface
     /* 虚拟产品默认值（与 CustomerBuilder 一致） */
     private const DEFAULT_FIRST_NAME = 'Guest';
     private const DEFAULT_LAST_NAME = 'User';
-    private const DEFAULT_COUNTRY = 'HK';
-    private const DEFAULT_STATE = 'HCW';
-    private const DEFAULT_CITY = 'Hong Kong';
+    private const DEFAULT_COUNTRY = 'US';
+    private const DEFAULT_STATE = 'AC';
+    private const DEFAULT_CITY = 'California';
 
     /**
      * @var CartRepositoryInterface

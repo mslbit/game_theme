@@ -84,6 +84,12 @@ class Notification implements NotificationInterface
     private ScopeConfigInterface $scopeConfig;
 
     /**
+     * @var \Magento\Framework\App\Response\Http
+     */
+    protected $response;
+
+
+    /**
      * @param LoggerInterface $logger
      * @param HttpRequest $request
      * @param CallbackProcessor $callbackProcessor
@@ -95,6 +101,7 @@ class Notification implements NotificationInterface
         HttpRequest $request,
         CallbackProcessor $callbackProcessor,
         XmlHelper $xmlHelper,
+        \Magento\Framework\App\Response\Http $response,
         ScopeConfigInterface $scopeConfig
     ) {
         $this->logger = $logger;
@@ -102,29 +109,31 @@ class Notification implements NotificationInterface
         $this->callbackProcessor = $callbackProcessor;
         $this->xmlHelper = $xmlHelper;
         $this->scopeConfig = $scopeConfig;
+        $this->response    = $response;
     }
 
     /**
      * 处理 Oceanpayment 异步通知
      *
-     * @return string 处理结果
+     * @return array $receive-ok 处理结果
      */
-    public function handle(): string
+    public function handle(): void
     {
         try {
+            
             /* IP 白名单校验 */
             if (!$this->validateIpWhitelist()) {
                 $this->logger->error('[Oceanpayment] Notification: IP not in whitelist', [
                     'remote_ip' => $this->getRemoteIp(),
                 ]);
-                return 'ip forbidden';
+                throw new \Exception('ip forbidden');
             }
 
             $xmlContent = $this->request->getContent();
 
             if (empty($xmlContent)) {
                 $this->logger->error('[Oceanpayment] Notification: Empty request body');
-                return 'empty body';
+                  throw new \Exception('empty body');
             }
 
             $rawData = $this->xmlHelper->parse($xmlContent);
@@ -139,7 +148,7 @@ class Notification implements NotificationInterface
 
             if (empty($params)) {
                 $this->logger->error('[Oceanpayment] Notification: Failed to parse XML');
-                return 'parse error';
+                throw new \Exception('parse error');
             }
 
             $this->logger->info('[Oceanpayment] Notification: Received', [
@@ -151,7 +160,8 @@ class Notification implements NotificationInterface
 
             if (!$this->callbackProcessor->verifySignature($params)) {
                 $this->logger->error('[Oceanpayment] Notification: Signature verification failed');
-                return 'sign error';
+
+                   throw new \Exception('sign error');
             }
 
             $orderNumber = $params['order_number'] ?? '';
@@ -161,14 +171,15 @@ class Notification implements NotificationInterface
                 $this->logger->error('[Oceanpayment] Notification: Order not found for order_number: %1', [
                     $orderNumber ?: '(empty)',
                 ]);
-                return 'order not found';
+                 throw new \Exception('order not found');
+               
             }
 
             if ($this->callbackProcessor->isOrderAlreadyProcessed($order)) {
                 $this->logger->info('[Oceanpayment] Notification: Order #%1 already processed', [
                     $order->getIncrementId(),
                 ]);
-                return self::RESPONSE_OK;
+                throw new \Exception(self::RESPONSE_OK);
             }
 
             $this->callbackProcessor->processCallback($order, $params, 'Notice');
@@ -177,12 +188,19 @@ class Notification implements NotificationInterface
                 $order->getIncrementId(),
             ]);
 
-            return self::RESPONSE_OK;
+         
+            $body = self::RESPONSE_OK;
+          
 
         } catch (\Exception $e) {
             $this->logger->error('[Oceanpayment] Notification exception: %1', [$e->getMessage()]);
-            return 'error';
+             $body = $e->getMessage();
         }
+         // --- 核心修正：乾淨輸出純字串並強制中斷 Magento Webapi 渲染 ---
+        $this->response->setHeader('Content-Type', 'text/plain; charset=utf-8', true);
+        $this->response->setBody($body);
+        $this->response->sendResponse();
+        exit;
     }
 
     /**

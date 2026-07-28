@@ -95,7 +95,9 @@ define([
             }
 
             /* 支付失败且无 pay_url（非3D场景的失败） */
-            if (data.payment_status && parseInt(data.payment_status) !== 1 && !data.pay_url) {
+            if (data.payment_status 
+                && !data.payment_details?.includes("20061:Duplicate order")
+                &&  parseInt(data.payment_status) !== 1 && !data.pay_url) {
                 var failMsg = data.payment_details || 'Payment failed';
                 this.messageContainer.addErrorMessage({message: failMsg});
                 this.isPlaceOrderActionAllowed(true);

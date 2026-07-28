@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 namespace Oceanpayment\Payment\Api;
-
+use Magento\Framework\App\Response\HttpInterface;
 /**
  * Oceanpayment 异步通知 REST API 接口
  *
@@ -20,7 +20,7 @@ interface NotificationInterface
      * 接收并解析 Oceanpayment 服务端推送的 XML 通知，
      * 验证签名后更新订单状态，返回 "receive-ok" 表示通知已成功接收
      *
-     * @return string 处理结果，成功时返回 "receive-ok"
+     * @return void $receive-ok 处理结果，成功时返回 "receive-ok"
      */
-    public function handle(): string;
+    public function handle(): void;
 }
