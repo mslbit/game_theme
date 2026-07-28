@@ -22,6 +22,9 @@
                 <!-- ko foreach: getRegion('beforeMethods') -->
                     <!-- ko template: getTemplate() --><!-- /ko -->
                 <!-- /ko -->
+                        <!-- ko foreach: getRegion('messages') -->
+        <!-- ko template: getTemplate() --><!-- /ko -->
+        <!--/ko-->
                 <div id="checkout-payment-method-load" class="opc-payment" data-bind="visible: isPaymentMethodsAvailable">
                     <!-- ko foreach: getRegion('payment-methods-list') -->
                         <!-- ko template: getTemplate() --><!-- /ko -->
