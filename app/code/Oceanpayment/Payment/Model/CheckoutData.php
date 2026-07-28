@@ -55,8 +55,7 @@ class CheckoutData implements CheckoutDataInterface
     ];
 
     /* 虚拟产品默认值（与 CustomerBuilder 一致） */
-    private const DEFAULT_FIRST_NAME = 'Guest';
-    private const DEFAULT_LAST_NAME = 'User';
+
     private const DEFAULT_COUNTRY = 'US';
     private const DEFAULT_STATE = 'AC';
     private const DEFAULT_CITY = 'California';
@@ -248,9 +247,12 @@ class CheckoutData implements CheckoutDataInterface
 
         if ($isVirtual) {
             /* 虚拟产品：使用客户姓名 + GeoIP（与 CustomerBuilder 一致） */
+            $firstName = $customerFirstname ?: $this->extractNameFromEmail($customerEmail, 'first');
+            $lastName = $customerLastname ?: $this->extractNameFromEmail($customerEmail, 'last');
+
             return [
-                'firstName' => $customerFirstname ?: self::DEFAULT_FIRST_NAME,
-                'lastName'  => $customerLastname ?: self::DEFAULT_LAST_NAME,
+                'firstName' => $firstName,
+                'lastName'  => $lastName,
                 'email'     => $customerEmail,
                 'phone'     => $this->generateMaskedMobileNumber(),
                 'country'   => $this->geoIpService->getCountryCode($clientIp) ?: self::DEFAULT_COUNTRY,
@@ -261,12 +263,12 @@ class CheckoutData implements CheckoutDataInterface
             ];
         }
 
-        /* 实体产品：使用前端传入的 billingAddress，空值回退到客户信息或默认值 */
+        /* 实体产品：使用前端传入的 billingAddress，空值回退到客户信息或 email 提取 */
         $firstName = trim((string) ($billingAddr['firstname'] ?? ''));
-        $firstName = $firstName ?: ($customerFirstname ?: self::DEFAULT_FIRST_NAME);
+        $firstName = $firstName ?: ($customerFirstname ?: $this->extractNameFromEmail($email, 'first'));
 
         $lastName = trim((string) ($billingAddr['lastname'] ?? ''));
-        $lastName = $lastName ?: ($customerLastname ?: self::DEFAULT_LAST_NAME);
+        $lastName = $lastName ?: ($customerLastname ?: $this->extractNameFromEmail($email, 'last'));
 
         $email = trim((string) ($billingAddr['email'] ?? ''));
         $email = $email ?: $customerEmail;
@@ -350,6 +352,32 @@ class CheckoutData implements CheckoutDataInterface
         }
 
         return $quoteId;
+    }
+
+    /**
+     * 从 email 提取姓名
+     *
+     * john.doe@gmail.com → firstName=John, lastName=Doe
+     * john@gmail.com → firstName=John, lastName=''
+     *
+     * @param string $email
+     * @param string $part 'first' 或 'last'
+     * @return string
+     */
+    private function extractNameFromEmail(string $email, string $part): string
+    {
+        if (empty($email)) {
+            return '';
+        }
+
+        $namePart = strstr($email, '@', true) ?: $email;
+        $parts = preg_split('/[._-]/', $namePart, 2);
+
+        if ($part === 'first') {
+            return ucfirst($parts[0] ?? $namePart);
+        }
+
+        return ucfirst($parts[1] ?? '');
     }
 
     /**

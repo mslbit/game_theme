@@ -94,10 +94,15 @@ define([
                 return;
             }
 
-            /* 支付失败且无 pay_url（非3D场景的失败） */
-            if (data.payment_status 
-                && !data.payment_details?.includes("20061:Duplicate order")
-                &&  parseInt(data.payment_status) !== 1 && !data.pay_url) {
+            /* 支付失败判断：
+             * - payment_status=0 且 payment_details 含 "20061:Duplicate order"：
+             *   网关已处理过此支付（上次提交了但后端没创建订单），直接走 placeOrder 创建订单
+             * - payment_status!=1 且无 pay_url：真正的支付失败，提示用户
+             */
+            var isDuplicateOrder = data.payment_details
+                && data.payment_details.indexOf('20061:Duplicate order') !== -1;
+
+            if (parseInt(data.payment_status) !== 1 && !data.pay_url && !isDuplicateOrder) {
                 var failMsg = data.payment_details || 'Payment failed';
                 this.messageContainer.addErrorMessage({message: failMsg});
                 this.isPlaceOrderActionAllowed(true);

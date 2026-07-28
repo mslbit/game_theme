@@ -1,8 +1,0 @@
-<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
-    <event name="checkout_submit_all_after">
-        <observer name="order_checkout_submit_all_after" instance="LianLian\LLPay\Observer\OrderObserver"  />
-    </event>
-    <event name="sales_order_save_commit_after">
-        <observer name="order_save_success_action" instance="LianLian\LLPay\Observer\OrderSaveObserver"  />
-    </event>
-</config>
