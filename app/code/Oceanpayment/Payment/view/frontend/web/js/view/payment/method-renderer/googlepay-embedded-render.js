@@ -63,7 +63,7 @@ define([
                                     orderAmount: quote.totals().grand_total
                                         ? parseFloat(quote.totals().grand_total).toFixed(2)
                                         : '0.00',
-                                    billCountry: (quote.billingAddress() || {}).country_id || ''
+                                    billCountry: (quote.billingAddress() || {}).country_id || 'US'
                                 },
                                 buttonStyle: {}
                             });

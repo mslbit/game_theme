@@ -57,7 +57,7 @@ define([
                     var tryInit = function () {
                         if (typeof Oceanpayment !== 'undefined') {
                             Oceanpayment.init(
-                                embeddedConfig.is_sandbox || false,
+                                embeddedConfig.is_sandbox || '',
                                 '',
                                 embeddedConfig.language || 'en_US'
                             );
