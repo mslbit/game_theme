@@ -109,14 +109,61 @@
         </arguments>
     </virtualType>
 
+    <!-- Refund: BuilderComposite + TransferFactory + Validator + HandlerChain -->
+    <virtualType name="LLCheckoutRefundBuilder" type="MslPay\LianLian\Gateway\Request\Builder\RefundBuilder">
+        <arguments>
+            <argument name="config" xsi:type="object">LLCheckoutConfig</argument>
+            <argument name="storeManager" xsi:type="object">Magento\Store\Model\StoreManagerInterface</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="LLRefundRequest" type="Magento\Payment\Gateway\Request\BuilderComposite">
+        <arguments>
+            <argument name="builders" xsi:type="array">
+                <item name="refund" xsi:type="string">LLCheckoutRefundBuilder</item>
+            </argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="LLCheckoutRefundTransferFactory" type="MslPay\LianLian\Gateway\Http\TransferFactory">
+        <arguments>
+            <argument name="config" xsi:type="object">LLCheckoutConfig</argument>
+            <argument name="signatureHelper" xsi:type="object">MslPay\LianLian\Gateway\Helper\LianLianSignatureHelper</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="LLCheckoutRefundValidator" type="MslPay\LianLian\Gateway\Validator\ResponseValidator">
+        <arguments>
+            <argument name="config" xsi:type="object">LLCheckoutConfig</argument>
+            <argument name="signatureHelper" xsi:type="object">MslPay\LianLian\Gateway\Helper\LianLianSignatureHelper</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="LLRefundHandler" type="Magento\Payment\Gateway\Response\HandlerChain">
+        <arguments>
+            <argument name="handlers" xsi:type="array">
+                <item name="refund" xsi:type="string">MslPay\LianLian\Gateway\Response\RefundHandler</item>
+            </argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="LLCheckoutRefundCommand" type="MslPay\LianLian\Gateway\Command\GatewayCommand">
+        <arguments>
+            <argument name="requestBuilder" xsi:type="object">LLRefundRequest</argument>
+            <argument name="transferFactory" xsi:type="object">LLCheckoutRefundTransferFactory</argument>
+            <argument name="client" xsi:type="object">MslPay\LianLian\Gateway\Http\Client</argument>
+            <argument name="validator" xsi:type="object">LLCheckoutRefundValidator</argument>
+            <argument name="handler" xsi:type="object">LLRefundHandler</argument>
+        </arguments>
+    </virtualType>
+
     <!-- Command Pool -->
     <virtualType name="LLCheckoutCommandPool" type="Magento\Payment\Gateway\Command\CommandPool">
         <arguments>
             <argument name="commands" xsi:type="array">
                 <item name="authorize" xsi:type="string">LLCheckoutAuthorizeCommand</item>
+
+                <item name="refund" xsi:type="string">LLCheckoutRefundCommand</item>
             </argument>
         </arguments>
     </virtualType>
+
+
 
     <!-- Payment Facade -->
     <virtualType name="LLCheckoutFacade" type="Magento\Payment\Model\Method\Adapter">
@@ -144,5 +191,7 @@
                 type="MslPay\LianLian\Model\PayUrl" />
     <preference for="MslPay\LianLian\Api\PaymentQueryInterface"
                 type="MslPay\LianLian\Model\PaymentQuery" />
+    <preference for="MslPay\LianLian\Api\RefundNotifyInterface"
+                type="MslPay\LianLian\Model\RefundNotify" />
 
 </config>

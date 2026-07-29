@@ -25,7 +25,7 @@
                 <can_authorize>1</can_authorize>
                 <can_capture>1</can_capture>
                 <can_void>0</can_void>
-                <can_refund>0</can_refund>
+                <can_refund>1</can_refund>
                 <can_sale>0</can_sale>
                 <can_initialize>0</can_initialize>
                 <active>0</active>

@@ -10,6 +10,14 @@
         </resources>
     </route>
 
+    <!-- 连连退款异步通知回调 -->
+    <route url="/V1/lianlian/refund-notify" method="POST">
+        <service class="MslPay\LianLian\Api\RefundNotifyInterface" method="handle"/>
+        <resources>
+            <resource ref="anonymous"/>
+        </resources>
+    </route>
+
     <!-- 连连支付获取 payment_url（登录用户） -->
     <route url="/V1/lianlian/:quoteId/:methodCode/pay-url" method="GET">
         <service class="MslPay\LianLian\Api\PayUrlInterface" method="getPayUrl"/>

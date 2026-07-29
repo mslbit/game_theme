@@ -72,7 +72,7 @@ class GatewayCommand implements CommandInterface
        
         /* 3. TransferFactory 签名 + headers + uri → Transfer 对象 */
         $transfer = $this->transferFactory->create($request);
- file_put_contents(BP.'/var/res1.log',print_r($request,true));
+ file_put_contents(BP.'/var/res1.log',print_r($request,true),FILE_APPEND);
         /* 4. Client 发送 HTTP 请求，返回原始响应 */
         $response = $this->client->placeRequest($transfer);
 
