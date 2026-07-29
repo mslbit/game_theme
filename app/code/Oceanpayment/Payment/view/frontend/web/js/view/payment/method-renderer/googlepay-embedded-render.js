@@ -56,7 +56,7 @@ define([
                         if (typeof onePageGooglePay !== 'undefined') {
                             onePageGooglePay.init(embeddedConfig.is_sandbox || false, {
                                 cssUrl: '',
-                                language: 'en',
+                                language: 'en_US',
                                 transactionInfo: {
                                     orderCurrency: quote.totals().base_currency_code || 'USD',
                                     orderAmount: quote.totals().grand_total

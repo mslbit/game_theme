@@ -227,7 +227,7 @@ class ConfigProvider implements ConfigProviderInterface
 
         return [
             'is_sandbox' => $isSandbox,
-            'language'   => 'en',
+            'language'   => 'en_US',
             'terminal'   => $methodConfig->getTerminal(),
             'back_url'   => $this->signatureHelper->buildBackUrl(),
             'sdk_url'    => self::SDK_URL_MAP[$methodCode][$envKey] ?? '',

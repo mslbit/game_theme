@@ -59,7 +59,7 @@ define([
                             Oceanpayment.init(
                                 embeddedConfig.is_sandbox || false,
                                 '',
-                                embeddedConfig.language || 'en'
+                                embeddedConfig.language || 'en_US'
                             );
                         } else if (retryCount < 10) {
                             retryCount++;
