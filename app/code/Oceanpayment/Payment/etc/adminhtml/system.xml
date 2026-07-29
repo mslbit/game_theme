@@ -9,6 +9,7 @@
                 <fieldset_css>complex oceanpayment-section</fieldset_css>
                 <attribute type="activity_path">payment/oceanpayment_creditcard/active</attribute>
 
+                <!-- Oceanpayment 共享凭证 -->
                 <group id="oceanpayment_required" translate="label" type="text" sortOrder="5" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Oceanpayment Credentials</label>
                     <attribute type="expanded">1</attribute>
@@ -20,7 +21,6 @@
                         <config_path>payment/oceanpayment_payment/environment</config_path>
                         <comment>Select Sandbox for testing, Production for live transactions.</comment>
                     </field>
-
 
                     <field id="debug" translate="label" type="select" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="0">
                         <label>Debug</label>
@@ -36,41 +36,10 @@
                             <field id="environment">sandbox</field>
                         </depends>
                     </field>
-                    <field id="sandbox_terminal" translate="label" type="text" sortOrder="110" showInDefault="1" showInWebsite="1" showInStore="0">
-                        <label>Sandbox Terminal</label>
-                        <config_path>payment/oceanpayment_payment/sandbox_terminal</config_path>
-                        <depends>
-                            <field id="environment">sandbox</field>
-                        </depends>
-                    </field>
-                    <field id="sandbox_securecode" translate="label" type="obscure" sortOrder="120" showInDefault="1" showInWebsite="1" showInStore="0">
-                        <label>Sandbox Secure Code</label>
-                        <config_path>payment/oceanpayment_payment/sandbox_securecode</config_path>
-                        <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
-                        <depends>
-                            <field id="environment">sandbox</field>
-                        </depends>
-                    </field>
-                
 
                     <field id="production_account" translate="label" type="text" sortOrder="200" showInDefault="1" showInWebsite="1" showInStore="0">
                         <label>Production Account</label>
                         <config_path>payment/oceanpayment_payment/production_account</config_path>
-                        <depends>
-                            <field id="environment">production</field>
-                        </depends>
-                    </field>
-                    <field id="production_terminal" translate="label" type="text" sortOrder="210" showInDefault="1" showInWebsite="1" showInStore="0">
-                        <label>Production Terminal</label>
-                        <config_path>payment/oceanpayment_payment/production_terminal</config_path>
-                        <depends>
-                            <field id="environment">production</field>
-                        </depends>
-                    </field>
-                    <field id="production_securecode" translate="label" type="obscure" sortOrder="220" showInDefault="1" showInWebsite="1" showInStore="0">
-                        <label>Production Secure Code</label>
-                        <config_path>payment/oceanpayment_payment/production_securecode</config_path>
-                        <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
                         <depends>
                             <field id="environment">production</field>
                         </depends>
@@ -92,6 +61,7 @@
                     </field>
                 </group>
 
+                <!-- Credit Card：sandbox + production 双环境 -->
                 <group id="oceanpayment_creditcard" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Credit Card</label>
                     <frontend_model>Magento\Config\Block\System\Config\Form\Fieldset</frontend_model>
@@ -126,9 +96,41 @@
                         <config_path>payment/oceanpayment_creditcard/public_key</config_path>
                         <comment>Oceanpayment public key for embedded credit card iframe initialization.</comment>
                     </field>
+                    <field id="sandbox_terminal" translate="label" type="text" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Sandbox Terminal</label>
+
+                        <config_path>payment/oceanpayment_creditcard/sandbox_terminal</config_path>
+                        <depends>
+                            <field id="*/oceanpayment/oceanpayment_required/environment">sandbox</field>
+                        </depends>
+                    </field>
+                    <field id="sandbox_securecode" translate="label" type="obscure" sortOrder="80" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Sandbox Secure Code</label>
+                        <config_path>payment/oceanpayment_creditcard/sandbox_securecode</config_path>
+                        <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                        <depends>
+                            <field id="*/oceanpayment/oceanpayment_required/environment">sandbox</field>
+                        </depends>
+                    </field>
+                    <field id="production_terminal" translate="label" type="text" sortOrder="90" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Production Terminal</label>
+                        <config_path>payment/oceanpayment_creditcard/production_terminal</config_path>
+                        <depends>
+                            <field id="*/oceanpayment/oceanpayment_required/environment">production</field>
+                        </depends>
+                    </field>
+                    <field id="production_securecode" translate="label" type="obscure" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Production Secure Code</label>
+                        <config_path>payment/oceanpayment_creditcard/production_securecode</config_path>
+                        <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                        <depends>
+                            <field id="*/oceanpayment/oceanpayment_required/environment">production</field>
+                        </depends>
+                    </field>
                 </group>
 
-              <group id="oceanpayment_applepay" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                <!-- Apple Pay：仅 production 环境 -->
+                <group id="oceanpayment_applepay" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Apple Pay</label>
                     <frontend_model>Magento\Config\Block\System\Config\Form\Fieldset</frontend_model>
 
@@ -157,8 +159,18 @@
                         <can_be_empty>1</can_be_empty>
                         <config_path>payment/oceanpayment_applepay/specificcountry</config_path>
                     </field>
+                    <field id="production_terminal" translate="label" type="text" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Production Terminal</label>
+                        <config_path>payment/oceanpayment_applepay/production_terminal</config_path>
+                    </field>
+                    <field id="production_securecode" translate="label" type="obscure" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Production Secure Code</label>
+                        <config_path>payment/oceanpayment_applepay/production_securecode</config_path>
+                        <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                    </field>
                 </group>
 
+                <!-- Google Pay：仅 production 环境 -->
                 <group id="oceanpayment_googlepay" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Google Pay</label>
                     <frontend_model>Magento\Config\Block\System\Config\Form\Fieldset</frontend_model>
@@ -172,13 +184,11 @@
                         <label>Title</label>
                         <config_path>payment/oceanpayment_googlepay/title</config_path>
                     </field>
-                 
                     <field id="sort_order" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="0">
                         <label>Sort Order</label>
                         <config_path>payment/oceanpayment_googlepay/sort_order</config_path>
                         <frontend_class>validate-number</frontend_class>
                     </field>
-                   
                     <field id="allowspecific" translate="label" type="allowspecific" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="0">
                         <label>Payment from Applicable Countries</label>
                         <source_model>Magento\Payment\Model\Config\Source\Allspecificcountries</source_model>
@@ -190,8 +200,16 @@
                         <can_be_empty>1</can_be_empty>
                         <config_path>payment/oceanpayment_googlepay/specificcountry</config_path>
                     </field>
+                    <field id="production_terminal" translate="label" type="text" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Production Terminal</label>
+                        <config_path>payment/oceanpayment_googlepay/production_terminal</config_path>
+                    </field>
+                    <field id="production_securecode" translate="label" type="obscure" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Production Secure Code</label>
+                        <config_path>payment/oceanpayment_googlepay/production_securecode</config_path>
+                        <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                    </field>
                 </group>
-
 
             </group>
         </section>

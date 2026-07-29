@@ -70,6 +70,8 @@ class OrderQueryBuilder implements BuilderInterface
         $paymentDO = SubjectReader::readPayment($buildSubject);
         $order = $paymentDO->getOrder();
 
+        $this->config->setMethodCode($paymentDO->getPayment()->getMethodInstance()->getCode());
+
         $request = [
             'account'      => $this->config->getAccount(),
             'terminal'     => $this->config->getTerminal(),

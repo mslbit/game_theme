@@ -148,6 +148,8 @@ class CheckoutData implements CheckoutDataInterface
             throw new LocalizedException(__('Quote is not active.'));
         }
 
+        $this->config->setMethodCode($methodCode);
+
         /* 确保 quote 有 reserved_order_id */
         if (!$quote->getReservedOrderId()) {
             $quote->reserveOrderId();
@@ -168,14 +170,8 @@ class CheckoutData implements CheckoutDataInterface
         $orderCurrency = (string) $quote->getBaseCurrencyCode();
         $clientIp = (string) $this->remoteAddress->getRemoteAddress();
 
-        /* 读取该支付方式的 public_key */
-        $connection = $this->resource->getConnection();
-        $publicKey = (string) $connection->fetchOne(
-            $connection->select()
-                ->from($this->resource->getTableName('core_config_data'), ['value'])
-                ->where('path = ?', 'payment/' . $methodCode . '/public_key')
-                ->limit(1)
-        );
+        /* 读取该支付方式的 public_key（仅 Credit Card 有，通过 Config 类读取） */
+        $publicKey = (string) $this->config->getValue('public_key');
 
         /* 组装 billing 字段（参考 CustomerBuilder 的虚拟产品处理） */
         $billingFields = $this->buildBillingFields($billingAddr, $isVirtual, $quote, $clientIp);

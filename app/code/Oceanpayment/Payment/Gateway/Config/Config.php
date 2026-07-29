@@ -7,6 +7,7 @@ use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Payment\Gateway\Config\Config as GatewayConfig;
 use Magento\Store\Model\ScopeInterface;
 
+
 /**
  * Oceanpayment 网关配置类
  *
@@ -99,22 +100,29 @@ class Config extends GatewayConfig
     /**
      * 获取 Oceanpayment 终端号
      *
+     * 所有支付方式统一按环境切换 sandbox_terminal / production_terminal
+     * 通过 getMethodEnvironmentValue 从 payment/<methodCode>/ 读取
+     *
      * @return string
      */
     public function getTerminal(): string
     {
-        return (string) $this->getEnvironmentBasedValue('terminal');
+        return (string) $this->getMethodEnvironmentValue('terminal');
     }
 
     /**
      * 获取 Oceanpayment 安全校验码
      *
+     * 所有支付方式统一按环境切换 sandbox_securecode / production_securecode
+     * 通过 getMethodEnvironmentValue 从 payment/<methodCode>/ 读取
+     *
      * @return string
      */
     public function getSecureCode(): string
     {
-        return (string) $this->getEnvironmentBasedValue('securecode');
+        return (string) $this->getMethodEnvironmentValue('securecode');
     }
+
 
     /**
      * 获取 Oceanpayment 网关 URL
@@ -166,42 +174,7 @@ class Config extends GatewayConfig
     }
 
     /**
-     * 获取 Apple Pay Merchant Identifier
-     *
-     * 仅 Apple Pay 支付方式有效，从 payment/oceanpayment_applepay/merchant_identifier 读取
-     *
-     * @return string
-     */
-    public function getMerchantIdentifier(): string
-    {
-        return (string) $this->getValue('merchant_identifier');
-    }
 
-    /**
-     * 获取 Google Pay Merchant ID
-     *
-     * 仅 Google Pay 支付方式有效，从 payment/oceanpayment_googlepay/merchant_id 读取
-     *
-     * @return string
-     */
-    public function getMerchantId(): string
-    {
-        return (string) $this->getValue('merchant_id');
-    }
-
-    /**
-     * 获取 Google Pay Gateway Merchant ID
-     *
-     * 仅 Google Pay 支付方式有效，从 payment/oceanpayment_googlepay/gateway_merchant_id 读取
-     *
-     * @return string
-     */
-    public function getGatewayMerchantId(): string
-    {
-        return (string) $this->getValue('gateway_merchant_id');
-    }
-
-    /**
      * 获取异步通知 IP 白名单
      *
      * 从 payment/oceanpayment_payment/notification_ip_whitelist 读取，
@@ -257,10 +230,8 @@ class Config extends GatewayConfig
      *
      * 从 oceanpayment_payment 配置段中，根据 environment 字段
      * 自动选择 sandbox_* 或 production_* 前缀的配置项。
-     * 加密字段（securecode/key）由 Magento 框架在 ScopeConfig 层自动解密，
-     * 业务代码无需手动处理。
      *
-     * @param string $field 字段名（如 account, terminal, securecode, gateway_url）
+     * @param string $field 字段名（如 account, gateway_url）
      * @return string 配置值
      */
     private function getEnvironmentBasedValue(string $field): string
@@ -280,5 +251,33 @@ class Config extends GatewayConfig
             $fullPath,
             ScopeInterface::SCOPE_STORE
         );
+    }
+
+    /**
+     * 根据当前环境从支付方式段读取配置值
+     *
+     * terminal 和 securecode 已下沉到每种支付方式：
+     * payment/<methodCode>/sandbox_terminal 或 production_terminal
+     * payment/<methodCode>/sandbox_securecode 或 production_securecode
+     *
+     * ApplePay/GooglePay 没有 sandbox 字段，sandbox 值为空时回退到 production 值
+     *
+     * @param string $field 字段名（terminal 或 securecode）
+     * @return string 配置值
+     */
+    private function getMethodEnvironmentValue(string $field): string
+    {
+        $isSandbox = $this->getEnvironment() === self::ENV_SANDBOX;
+        $prefix = $isSandbox ? 'sandbox_' : 'production_';
+        $pathKey = $prefix . $field;
+
+        $value = (string) $this->getValue($pathKey);
+
+        /* sandbox 值为空时回退到 production（ApplePay/GooglePay 无 sandbox 配置） */
+        if ($isSandbox && $value === '') {
+            $value = (string) $this->getValue('production_' . $field);
+        }
+
+        return $value;
     }
 }

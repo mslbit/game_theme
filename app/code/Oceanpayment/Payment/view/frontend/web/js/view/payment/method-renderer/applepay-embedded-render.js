@@ -57,6 +57,7 @@ define([
                             onePageApplePay.init(embeddedConfig.is_sandbox || false, {
                                 terminal: embeddedConfig.terminal || '',
                                 cssUrl: '',
+                                language: 'en',
                                 transactionInfo: {
                                     orderCurrency: quote.totals().base_currency_code || 'USD',
                                     orderAmount: quote.totals().grand_total

@@ -17,12 +17,8 @@
                 <environment>sandbox</environment>
                 <debug>0</debug>
                 <sandbox_account/>
-                <sandbox_terminal/>
-                <sandbox_securecode backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
-                <sandbox_gateway_url>https://test-secure.oceanpayment.com</sandbox_gateway_url>
                 <production_account/>
-                <production_terminal/>
-                <production_securecode backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
+                <sandbox_gateway_url>https://test-secure.oceanpayment.com</sandbox_gateway_url>
                 <production_gateway_url>https://secure.oceanpayment.com</production_gateway_url>
                 <notification_ip_whitelist/>
                 <notification_ip_allow_all>1</notification_ip_allow_all>
@@ -49,6 +45,10 @@
                 <specificcountry/>
                 <sort_order>10</sort_order>
                 <methods>Credit Card</methods>
+                <sandbox_terminal/>
+                <production_terminal/>
+                <sandbox_securecode backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
+                <production_securecode backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
                 <public_key/>
             </oceanpayment_creditcard>
 
@@ -73,7 +73,8 @@
                 <specificcountry/>
                 <sort_order>20</sort_order>
                 <methods>ApplePay</methods>
-                <merchant_identifier/>
+                <production_terminal/>
+                <production_securecode backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
             </oceanpayment_applepay>
 
             <!-- Google Pay（嵌入式） -->
@@ -97,8 +98,9 @@
                 <specificcountry/>
                 <sort_order>30</sort_order>
                 <methods>GooglePay</methods>
-                <merchant_id/>
-                <gateway_merchant_id/>
+                <production_terminal/>
+                <production_securecode backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
+
             </oceanpayment_googlepay>
 
         </payment>

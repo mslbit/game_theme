@@ -93,6 +93,8 @@ class CustomerBuilder implements BuilderInterface
         $order = $payment->getOrder();
         $billingAddress = $order->getBillingAddress();
 
+        $this->config->setMethodCode($payment->getMethod());
+
         /* 虚拟订单（如游戏充值）可能无账单地址 */
         $isVirtual = (bool) $order->getIsVirtual();
         $customerEmail = $order->getCustomerEmail() ?? '';

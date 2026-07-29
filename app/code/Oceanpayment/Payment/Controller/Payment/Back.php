@@ -128,8 +128,9 @@ class Back extends Action implements HttpPostActionInterface, CsrfAwareActionInt
                 return $this->redirectToSuccess();
             }
 
-            /* 验证签名：在信任回调参数之前必须先验签 */
-            if (!$this->callbackProcessor->verifySignature($params)) {
+            /* 验证签名：从订单获取支付方式，用于获取正确的 secureCode */
+            $methodCode = (string) ($order->getPayment() ? $order->getPayment()->getMethod() : '');
+            if (!$this->callbackProcessor->verifySignature($params, $methodCode)) {
                 $this->messageManager->addErrorMessage(__('Payment verification failed. Please contact support.'));
                 return $this->redirectToFailure();
             }

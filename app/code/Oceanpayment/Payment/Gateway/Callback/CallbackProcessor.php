@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Oceanpayment\Payment\Gateway\Callback;
 
-use Magento\Framework\App\Config\ScopeConfigInterface;
+
 use Magento\Framework\Api\SearchCriteriaBuilder;
 use Magento\Framework\DB\Transaction as DbTransaction;
 use Magento\Framework\Event\ManagerInterface as EventManager;
@@ -13,7 +13,8 @@ use Magento\Sales\Model\Order;
 use Magento\Sales\Model\Order\Email\Sender\OrderSender;
 use Magento\Sales\Model\Order\Payment\Transaction as PaymentTransaction;
 use Magento\Sales\Model\Service\InvoiceService;
-use Magento\Store\Model\ScopeInterface;
+
+use Oceanpayment\Payment\Gateway\Config\Config;
 use Oceanpayment\Payment\Gateway\Helper\SignatureHelper;
 use Oceanpayment\Payment\Gateway\Service\PaymentSuccessService;
 use Psr\Log\LoggerInterface;
@@ -83,12 +84,7 @@ class CallbackProcessor
     ];
 
     /**
-     * 共享网关配置的 XML 路径前缀
-     * 注意：Oceanpayment_Payment 模块使用 oceanpayment_payment 配置段
-     */
-    private const SHARED_CONFIG_PREFIX = 'payment/oceanpayment_payment';
 
-    /**
      * @var LoggerInterface
      */
     private LoggerInterface $logger;
@@ -104,9 +100,9 @@ class CallbackProcessor
     private SearchCriteriaBuilder $searchCriteriaBuilder;
 
     /**
-     * @var ScopeConfigInterface
+     * @var Config 网关配置（通过 methodCode 动态路由）
      */
-    private ScopeConfigInterface $scopeConfig;
+    private Config $config;
 
     /**
      * @var InvoiceService
@@ -142,10 +138,10 @@ class CallbackProcessor
      * @param LoggerInterface $logger
      * @param OrderRepositoryInterface $orderRepository
      * @param SearchCriteriaBuilder $searchCriteriaBuilder
-     * @param ScopeConfigInterface $scopeConfig
      * @param InvoiceService $invoiceService
      * @param OrderSender $orderSender
      * @param DbTransaction $dbTransaction
+     * @param Config $config
      * @param SignatureHelper $signatureHelper
      * @param PaymentSuccessService $paymentSuccessService
      * @param EventManager $eventManager
@@ -154,10 +150,10 @@ class CallbackProcessor
         LoggerInterface $logger,
         OrderRepositoryInterface $orderRepository,
         SearchCriteriaBuilder $searchCriteriaBuilder,
-        ScopeConfigInterface $scopeConfig,
         InvoiceService $invoiceService,
         OrderSender $orderSender,
         DbTransaction $dbTransaction,
+        Config $config,
         SignatureHelper $signatureHelper,
         PaymentSuccessService $paymentSuccessService,
         EventManager $eventManager
@@ -165,10 +161,10 @@ class CallbackProcessor
         $this->logger = $logger;
         $this->orderRepository = $orderRepository;
         $this->searchCriteriaBuilder = $searchCriteriaBuilder;
-        $this->scopeConfig = $scopeConfig;
         $this->invoiceService = $invoiceService;
         $this->orderSender = $orderSender;
         $this->dbTransaction = $dbTransaction;
+        $this->config = $config;
         $this->signatureHelper = $signatureHelper;
         $this->eventManager = $eventManager;
         $this->paymentSuccessService = $paymentSuccessService;
@@ -177,15 +173,22 @@ class CallbackProcessor
     /**
      * 验证回调签名
      *
-     * 由 SignatureHelper 计算签名，secureCode 根据回调中的 terminal 匹配 sandbox/production
+     * 根据订单支付方式，通过 Config 获取对应的 secureCode 验签
      *
      * @param array $params 回调参数
-     * @return bool 签名是否有效
+     * @param string $methodCode 支付方式代码（从订单获取）
+     * @return bool
      */
-    public function verifySignature(array $params): bool
+    public function verifySignature(array $params, string $methodCode = ''): bool
     {
+        if (empty($methodCode)) {
+            throw new \InvalidArgumentException('[Oceanpayment] methodCode is required for signature verification');
+        }
+
+        $this->config->setMethodCode($methodCode);
+        $secureCode = $this->config->getSecureCode();
+
         $returnedSign = $params['signValue'] ?? '';
-        $secureCode = $this->resolveSecureCode($params['terminal'] ?? '');
         $expectedSign = $this->signatureHelper->calculateSignature(
             self::SIGN_FIELDS,
             $params,
@@ -197,8 +200,7 @@ class CallbackProcessor
         }
 
         $this->logger->warning('[Oceanpayment] Signature mismatch', [
-            'expected' => $expectedSign,
-            'returned' => $returnedSign,
+            'method' => $methodCode,
         ]);
 
         return false;
@@ -283,76 +285,7 @@ class CallbackProcessor
     }
 
     /**
-     * 根据回调中的 terminal 匹配对应的 secureCode
-     *
-     * Magento 框架在 ScopeConfig 层已自动解密加密字段，无需手动处理
-     *
-     * @param string $callbackTerminal 回调中的 terminal 值
-     * @return string
-     */
-    private function resolveSecureCode(string $callbackTerminal): string
-    {
-        if (empty($callbackTerminal)) {
-            return $this->getSecureCodeByEnvironment();
-        }
 
-        $sandboxTerminal = (string) $this->scopeConfig->getValue(
-            self::SHARED_CONFIG_PREFIX . '/sandbox_terminal',
-            ScopeInterface::SCOPE_STORE
-        );
-        $productionTerminal = (string) $this->scopeConfig->getValue(
-            self::SHARED_CONFIG_PREFIX . '/production_terminal',
-            ScopeInterface::SCOPE_STORE
-        );
-
-        if ($callbackTerminal === $sandboxTerminal) {
-            $this->logger->debug('[Oceanpayment] Matched sandbox terminal');
-            return (string) $this->scopeConfig->getValue(
-                self::SHARED_CONFIG_PREFIX . '/sandbox_securecode',
-                ScopeInterface::SCOPE_STORE
-            );
-        }
-
-        if ($callbackTerminal === $productionTerminal) {
-            $this->logger->debug('[Oceanpayment] Matched production terminal');
-            return (string) $this->scopeConfig->getValue(
-                self::SHARED_CONFIG_PREFIX . '/production_securecode',
-                ScopeInterface::SCOPE_STORE
-            );
-        }
-
-        $this->logger->warning('[Oceanpayment] Terminal {terminal} did not match config, falling back to current environment', [
-            'terminal' => $callbackTerminal,
-        ]);
-
-        return $this->getSecureCodeByEnvironment();
-    }
-
-    /**
-     * 根据当前环境配置获取 secureCode
-     *
-     * Magento 框架在 ScopeConfig 层已自动解密加密字段，无需手动处理
-     *
-     * @return string
-     */
-    private function getSecureCodeByEnvironment(): string
-    {
-        $environment = (string) $this->scopeConfig->getValue(
-            self::SHARED_CONFIG_PREFIX . '/environment',
-            ScopeInterface::SCOPE_STORE
-        );
-
-        $pathKey = ($environment === 'production')
-            ? 'production_securecode'
-            : 'sandbox_securecode';
-
-        return (string) $this->scopeConfig->getValue(
-            self::SHARED_CONFIG_PREFIX . '/' . $pathKey,
-            ScopeInterface::SCOPE_STORE
-        );
-    }
-
-    /**
      * 处理支付失败
      *
      * @param OrderInterface $order

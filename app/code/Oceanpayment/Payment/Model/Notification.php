@@ -158,7 +158,20 @@ class Notification implements NotificationInterface
                 'terminal'       => $params['terminal'] ?? '(missing)',
             ]);
 
-            if (!$this->callbackProcessor->verifySignature($params)) {
+            $orderNumber = $params['order_number'] ?? '';
+            $order = $this->callbackProcessor->loadOrder($orderNumber);
+
+            if (!$order || !$order->getEntityId()) {
+                $this->logger->error('[Oceanpayment] Notification: Order not found for order_number: %1', [
+                    $orderNumber ?: '(empty)',
+                ]);
+                 throw new \Exception('order not found');
+            }
+
+            /* 从订单获取支付方式，用于验签时获取正确的 secureCode */
+            $methodCode = (string) ($order->getPayment() ? $order->getPayment()->getMethod() : '');
+
+            if (!$this->callbackProcessor->verifySignature($params, $methodCode)) {
                 $this->logger->error('[Oceanpayment] Notification: Signature verification failed');
 
                    throw new \Exception('sign error');

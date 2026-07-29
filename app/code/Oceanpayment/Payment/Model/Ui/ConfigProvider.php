@@ -221,11 +221,14 @@ class ConfigProvider implements ConfigProviderInterface
             === \Oceanpayment\Payment\Model\Config\Source\Environment::SANDBOX;
         $envKey = $isSandbox ? 'sandbox' : 'production';
 
+        /* 使用对应支付方式的 Config 实例获取 terminal */
+        $methodConfigs = $this->getMethodConfigs();
+        $methodConfig = $methodConfigs[$methodCode] ?? $this->creditCardConfig;
+
         return [
             'is_sandbox' => $isSandbox,
             'language'   => 'en',
-            'terminal'   => $this->creditCardConfig->getTerminal(),
-          //  'public_key' => (string) $this->creditCardConfig->getValue('public_key'),
+            'terminal'   => $methodConfig->getTerminal(),
             'back_url'   => $this->signatureHelper->buildBackUrl(),
             'sdk_url'    => self::SDK_URL_MAP[$methodCode][$envKey] ?? '',
         ];
