@@ -50,6 +50,7 @@ class CustomerBuilder implements BuilderInterface
             $lastName = $lastName ??  ($parts[1] ?? $firstName);
         }
       
+        $lastName = $lastName ?? $firstName;
 
         /* 构建 Customer DataObject */
         $customer = new Customer();
