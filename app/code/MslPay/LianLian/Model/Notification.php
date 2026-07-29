@@ -66,8 +66,17 @@ class Notification implements NotificationInterface
             $paymentData = $params['payment_data'] ?? [];
             $paymentStatus = $paymentData['payment_status'] ?? '';
 
+            $this->logger->info('[LianLian] Notification parsed', [
+                'merchant_transaction_id' => $merchantTransactionId,
+                'payment_status' => $paymentStatus,
+            ]);
+
             /* 连连异步通知签名在请求 Header 中，不是 body 中 */
             $signature = $this->request->getHeader('signature') ?: '';
+
+            $this->logger->info('[LianLian] Notification signature header', [
+                'signature' => $signature ?: '(empty)',
+            ]);
 
             if (empty($merchantTransactionId) || empty($signature)) {
                 $this->logger->error('[LianLian] Notification missing required params', [
@@ -78,7 +87,10 @@ class Notification implements NotificationInterface
             }
 
             /* 用连连公钥验签 */
-            if (!$this->signatureHelper->verify($params, $signature, $this->config->getLianLianPublicKey())) {
+            $verifyResult = $this->signatureHelper->verify($params, $signature, $this->config->getLianLianPublicKey());
+            $this->logger->info('[LianLian] Notification signature verify result', ['result' => $verifyResult]);
+
+            if (!$verifyResult) {
                 $this->logger->error('[LianLian] Notification signature verification failed', [
                     'merchant_transaction_id' => $merchantTransactionId,
                 ]);
