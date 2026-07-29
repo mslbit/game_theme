@@ -54,6 +54,7 @@ define([
                     var retryCount = 0;
                     var tryInit = function () {
                         if (typeof onePageGooglePay !== 'undefined') {
+                         
                             onePageGooglePay.init(embeddedConfig.is_sandbox || '', {
                                 cssUrl: '',
                                 language: 'en_US',
@@ -62,7 +63,7 @@ define([
                                     orderAmount: quote.totals().grand_total
                                         ? parseFloat(quote.totals().grand_total).toFixed(2)
                                         : '0.00',
-                                    billCountry: (quote.billingAddress() || {}).countryId || ''
+                                    billCountry: (quote.billingAddress() || {}).country_id || ''
                                 },
                                 buttonStyle: {}
                             });

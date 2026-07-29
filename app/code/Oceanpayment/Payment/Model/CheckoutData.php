@@ -251,7 +251,7 @@ class CheckoutData implements CheckoutDataInterface
                 'lastName'  => $lastName,
                 'email'     => $customerEmail,
                 'phone'     => $billingAddr['telephone'] ? $billingAddr['telephone'] : \Folix\SimpleCheckout\Model\BillingConfigProvider::generateMaskedMobileNumber(),
-                'country'   => $this->geoIpService->getCountryCode($clientIp) ?: self::DEFAULT_COUNTRY,
+                'country'   => $billingAddr['country_id'] ? $billingAddr['country_id'] :( $this->geoIpService->getCountryCode($clientIp) ?: self::DEFAULT_COUNTRY),
                 'state'     => $this->geoIpService->getRegionCode($clientIp) ?: self::DEFAULT_STATE,
                 'city'      => $this->geoIpService->getCity($clientIp) ?: self::DEFAULT_CITY,
                 'street'    => '',
