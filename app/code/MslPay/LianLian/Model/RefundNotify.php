@@ -154,6 +154,11 @@ class RefundNotify implements RefundNotifyInterface
                 ->limit(1)
         );
 
+        $this->logger->info('[LianLian] RefundNotify creditmemo query result', [
+            'invoice_id' => $invoiceId,
+            'entity_id' => $entityId,
+        ]);
+
         if ($entityId <= 0) {
             $this->logger->error('[LianLian] RefundNotify creditmemo not found by invoice_id', [
                 'invoice_id' => $invoiceId,
@@ -162,13 +167,29 @@ class RefundNotify implements RefundNotifyInterface
         }
 
         /* load creditmemo 并更新状态 */
-        $creditmemoFactory = \Magento\Framework\App\ObjectManager::getInstance()->create(Creditmemo::class);
-        $creditmemo = $this->creditmemoResource->load($creditmemoFactory, $entityId);
+        $creditmemo = \Magento\Framework\App\ObjectManager::getInstance()->create(Creditmemo::class);
+        $this->creditmemoResource->load($creditmemo, $entityId);
+
+        $this->logger->info('[LianLian] RefundNotify creditmemo loaded', [
+            'entity_id' => $entityId,
+            'creditmemo_id' => $creditmemo->getId(),
+            'current_state' => $creditmemo->getState(),
+        ]);
+
         /**
          * @var Creditmemo $creditmemo
          */
-        $creditmemo->setState(Creditmemo::STATE_REFUNDED);
-        $this->creditmemoResource->save($creditmemo);
+        try {
+            $creditmemo->setState(Creditmemo::STATE_REFUNDED);
+            $this->creditmemoResource->save($creditmemo);
+        } catch (\Exception $e) {
+            $this->logger->error('[LianLian] RefundNotify creditmemo save failed', [
+                'entity_id' => $entityId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return;
+        }
 
         $this->logger->info('[LianLian] RefundNotify: creditmemo updated to REFUNDED', [
             'invoice_id' => $invoiceId,
