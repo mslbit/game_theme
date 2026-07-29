@@ -54,7 +54,7 @@ define([
                     var retryCount = 0;
                     var tryInit = function () {
                         if (typeof onePageGooglePay !== 'undefined') {
-                            onePageGooglePay.init(embeddedConfig.is_sandbox || false, {
+                            onePageGooglePay.init(embeddedConfig.is_sandbox || '', {
                                 cssUrl: '',
                                 language: 'en_US',
                                 transactionInfo: {
