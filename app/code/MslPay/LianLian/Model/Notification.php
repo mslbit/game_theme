@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace MslPay\LianLian\Model;
 
 use Magento\Framework\App\Request\Http as HttpRequest;
+use Magento\Framework\App\Response\Http as HttpResponse;
 use Magento\Sales\Api\OrderRepositoryInterface;
 use Magento\Framework\Api\SearchCriteriaBuilder;
 use MslPay\LianLian\Api\NotificationInterface;
@@ -18,8 +19,11 @@ use Psr\Log\LoggerInterface;
  * 端点路由：POST /rest/V1/lianlian/notify
  * 权限：anonymous
  *
- * 连连只在 payment_status=PS 时才发送异步通知。
+ * 连连只在 payment_status=PS. 时才发送异步通知。
  * 商户必须验签后处理订单，并返回 {"code":"200","message":"success"}。
+ *
+ * 使用 response->setBody() + sendResponse() + exit 直接输出，
+ * 避免 Magento Webapi 框架二次渲染（与 Oceanpayment 一致）
  */
 class Notification implements NotificationInterface
 {
@@ -29,6 +33,7 @@ class Notification implements NotificationInterface
     private SearchCriteriaBuilder $searchCriteriaBuilder;
     private PaymentSuccessService $paymentSuccessService;
     private HttpRequest $request;
+    private HttpResponse $response;
     private LoggerInterface $logger;
 
     public function __construct(
@@ -38,6 +43,7 @@ class Notification implements NotificationInterface
         SearchCriteriaBuilder $searchCriteriaBuilder,
         PaymentSuccessService $paymentSuccessService,
         HttpRequest $request,
+        HttpResponse $response,
         LoggerInterface $logger
     ) {
         $this->config = $config;
@@ -46,10 +52,11 @@ class Notification implements NotificationInterface
         $this->searchCriteriaBuilder = $searchCriteriaBuilder;
         $this->paymentSuccessService = $paymentSuccessService;
         $this->request = $request;
+        $this->response = $response;
         $this->logger = $logger;
     }
 
-    public function handle(): string
+    public function handle(): void
     {
         try {
             $rawBody = $this->request->getContent();
@@ -59,7 +66,7 @@ class Notification implements NotificationInterface
 
             if (!is_array($params)) {
                 $this->logger->error('[LianLian] Notification invalid JSON body');
-                return $this->jsonResponse('400', 'Invalid request');
+                throw new \Exception('Invalid request');
             }
 
             $merchantTransactionId = $params['merchant_transaction_id'] ?? '';
@@ -74,35 +81,29 @@ class Notification implements NotificationInterface
             /* 连连异步通知签名在请求 Header 中，不是 body 中 */
             $signature = $this->request->getHeader('signature') ?: '';
 
-            $this->logger->info('[LianLian] Notification signature header', [
-                'signature' => $signature ?: '(empty)',
-            ]);
-
             if (empty($merchantTransactionId) || empty($signature)) {
                 $this->logger->error('[LianLian] Notification missing required params', [
                     'has_merchant_transaction_id' => !empty($merchantTransactionId),
                     'has_signature' => !empty($signature),
                 ]);
-                return $this->jsonResponse('400', 'Missing required parameters');
+                throw new \Exception('Missing required parameters');
             }
 
             /* 用连连公钥验签 */
-            $verifyResult = $this->signatureHelper->verify($params, $signature, $this->config->getLianLianPublicKey());
-            $this->logger->info('[LianLian] Notification signature verify result', ['result' => $verifyResult]);
-
-            if (!$verifyResult) {
+            if (!$this->signatureHelper->verify($params, $signature, $this->config->getLianLianPublicKey())) {
                 $this->logger->error('[LianLian] Notification signature verification failed', [
                     'merchant_transaction_id' => $merchantTransactionId,
                 ]);
-                return $this->jsonResponse('400', 'Signature verification failed');
+                throw new \Exception('Signature verification failed');
             }
 
             $order = $this->findOrderByIncrementId($merchantTransactionId);
+
             if (!$order) {
                 $this->logger->error('[LianLian] Notification order not found', [
                     'merchant_transaction_id' => $merchantTransactionId,
                 ]);
-                return $this->jsonResponse('400', 'Order not found');
+                throw new \Exception('Order not found');
             }
 
             if ($paymentStatus === 'PS') {
@@ -114,12 +115,18 @@ class Notification implements NotificationInterface
                 ]);
             }
 
-            return $this->jsonResponse('200', 'success');
+            $body = json_encode(['code' => '200', 'message' => 'success']);
 
         } catch (\Exception $e) {
             $this->logger->error('[LianLian] Notification exception: {message}', ['message' => $e->getMessage()]);
-            return $this->jsonResponse('500', 'Internal error');
+            $body = json_encode(['code' => '500', 'message' => $e->getMessage()]);
         }
+
+        /* 直接输出 JSON 并中断 Magento Webapi 渲染 */
+        $this->response->setHeader('Content-Type', 'application/json; charset=utf-8', true);
+        $this->response->setBody($body);
+        $this->response->sendResponse();
+        exit;
     }
 
     private function findOrderByIncrementId(string $incrementId)
@@ -133,10 +140,5 @@ class Notification implements NotificationInterface
         } catch (\Exception $e) {
             return null;
         }
-    }
-
-    private function jsonResponse(string $code, string $message): string
-    {
-        return json_encode(['code' => $code, 'message' => $message]);
     }
 }

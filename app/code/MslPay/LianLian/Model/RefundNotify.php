@@ -5,8 +5,8 @@ namespace MslPay\LianLian\Model;
 
 use Magento\Framework\App\Request\Http as HttpRequest;
 use Magento\Framework\App\ResourceConnection;
+use Magento\Framework\App\Response\Http as HttpResponse;
 use Magento\Sales\Model\Order\Creditmemo;
-
 use Magento\Sales\Model\ResourceModel\Order\Creditmemo as CreditmemoResource;
 use MslPay\LianLian\Api\RefundNotifyInterface;
 use MslPay\LianLian\Gateway\Config\Config;
@@ -25,6 +25,9 @@ use Psr\Log\LoggerInterface;
  * merchant_transaction_id 格式：T-{invoice_increment_id}-{invoice_entity_id}
  * 退款通知时用 '-' 分割取最后一段作为 invoice_id，
  * 查 sales_creditmemo 表 invoice_id 字段定位 creditmemo。
+ *
+ * 使用 response->setBody() + sendResponse() + exit 直接输出，
+ * 避免 Magento Webapi 框架二次渲染（与 Oceanpayment 一致）
  */
 class RefundNotify implements RefundNotifyInterface
 {
@@ -33,6 +36,7 @@ class RefundNotify implements RefundNotifyInterface
     private ResourceConnection $resourceConnection;
     private CreditmemoResource $creditmemoResource;
     private HttpRequest $request;
+    private HttpResponse $response;
     private LoggerInterface $logger;
 
     public function __construct(
@@ -41,6 +45,7 @@ class RefundNotify implements RefundNotifyInterface
         ResourceConnection $resourceConnection,
         CreditmemoResource $creditmemoResource,
         HttpRequest $request,
+        HttpResponse $response,
         LoggerInterface $logger
     ) {
         $this->config = $config;
@@ -48,10 +53,11 @@ class RefundNotify implements RefundNotifyInterface
         $this->resourceConnection = $resourceConnection;
         $this->creditmemoResource = $creditmemoResource;
         $this->request = $request;
+        $this->response = $response;
         $this->logger = $logger;
     }
 
-    public function handle(): string
+    public function handle(): void
     {
         try {
             $rawBody = $this->request->getContent();
@@ -61,7 +67,7 @@ class RefundNotify implements RefundNotifyInterface
 
             if (!is_array($params)) {
                 $this->logger->error('[LianLian] RefundNotify invalid JSON body');
-                return $this->jsonResponse('400', 'Invalid request');
+                throw new \Exception('Invalid request');
             }
 
             $merchantTransactionId = $params['merchant_transaction_id'] ?? '';
@@ -81,7 +87,7 @@ class RefundNotify implements RefundNotifyInterface
                     'has_merchant_transaction_id' => !empty($merchantTransactionId),
                     'has_signature' => !empty($signature),
                 ]);
-                return $this->jsonResponse('400', 'Missing required parameters');
+                throw new \Exception('Missing required parameters');
             }
 
             /* 用连连公钥验签 */
@@ -92,7 +98,7 @@ class RefundNotify implements RefundNotifyInterface
                 $this->logger->error('[LianLian] RefundNotify signature verification failed', [
                     'merchant_transaction_id' => $merchantTransactionId,
                 ]);
-                return $this->jsonResponse('400', 'Signature verification failed');
+                throw new \Exception('Signature verification failed');
             }
 
             if ($refundStatus === 'RS') {
@@ -104,12 +110,18 @@ class RefundNotify implements RefundNotifyInterface
                 ]);
             }
 
-            return $this->jsonResponse('200', 'success');
+            $body = json_encode(['code' => '200', 'message' => 'success']);
 
         } catch (\Exception $e) {
             $this->logger->error('[LianLian] RefundNotify exception: {message}', ['message' => $e->getMessage()]);
-            return $this->jsonResponse('500', 'Internal error');
+            $body = json_encode(['code' => '500', 'message' => $e->getMessage()]);
         }
+
+        /* 直接输出 JSON 并中断 Magento Webapi 渲染 */
+        $this->response->setHeader('Content-Type', 'application/json; charset=utf-8', true);
+        $this->response->setBody($body);
+        $this->response->sendResponse();
+        exit;
     }
 
     /**
@@ -196,10 +208,5 @@ class RefundNotify implements RefundNotifyInterface
             'entity_id' => $entityId,
             'll_transaction_id' => $llTransactionId,
         ]);
-    }
-
-    private function jsonResponse(string $code, string $message): string
-    {
-        return json_encode(['code' => $code, 'message' => $message]);
     }
 }

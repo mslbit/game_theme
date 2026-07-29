@@ -16,7 +16,7 @@ interface RefundNotifyInterface
     /**
      * 处理退款异步通知
      *
-     * @return string JSON 响应 {"code":"200","message":"success"}
+     * @return void JSON 响应 {"code":"200","message":"success"}
      */
-    public function handle(): string;
+    public function handle(): void;
 }

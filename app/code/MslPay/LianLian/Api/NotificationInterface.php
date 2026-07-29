@@ -20,7 +20,7 @@ interface NotificationInterface
      * 接收并解析连连服务端推送的 JSON 通知，
      * 验证 RSA 签名后更新订单状态，返回 {"code":"200","message":"success"}
      *
-     * @return string 处理结果，JSON 格式
+     * @return void 处理结果，JSON 格式
      */
-    public function handle(): string;
+    public function handle(): void;
 }
