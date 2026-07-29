@@ -43,12 +43,13 @@ class CustomerBuilder implements BuilderInterface
         $phone = $billingAddress ? (string) $billingAddress->getTelephone() : '';
 
         /* firstName/lastName 为空时从 email 提取：取 @ 前缀，用 '.' 或 '_' 分割为 first/last */
-        if (empty($firstName) && empty($lastName)) {
+        if (empty($firstName)) {
             $emailLocal = strstr($email, '@', true) ?: $email;
             $parts = preg_split('/[._]/', $emailLocal, 2);
             $firstName = $parts[0] ?? $emailLocal;
-            $lastName = $parts[1] ?? $firstName;
+            $lastName = $lastName ??  ($parts[1] ?? $firstName);
         }
+      
 
         /* 构建 Customer DataObject */
         $customer = new Customer();
