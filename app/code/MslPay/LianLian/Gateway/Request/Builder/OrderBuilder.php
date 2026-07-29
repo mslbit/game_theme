@@ -126,7 +126,7 @@ class OrderBuilder implements BuilderInterface
         }
 
         $firstName = $shippingAddress->getFirstname() ?? '';
-        $lastName = $shippingAddress->getLastname() ?? '';
+        $lastName = $shippingAddress->getLastname() ?? $firstName;
 
         /* 构建 Address DataObject */
         $address = $this->addressBuilder->build($shippingAddress);
