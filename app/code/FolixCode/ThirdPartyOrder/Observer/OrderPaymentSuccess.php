@@ -58,6 +58,8 @@ class OrderPaymentSuccess implements ObserverInterface
                 return;
             }
 
+            if($this->resource->loadByMagentoOrderId($order->getId())) return;
+
             $this->logger->info('Order payment success, pre-initializing third party orders', [
                 'order_id' => $order->getId(),
                 'increment_id' => $order->getIncrementId()

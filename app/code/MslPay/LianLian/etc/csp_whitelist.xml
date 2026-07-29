@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<csp_whitelist xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Csp:etc/csp_whitelist.xsd">
+    <policies>
+        <policy id="script-src">
+            <values>
+                <value id="lianlian-script-sandbox" type="host">gacashier.lianlianpay-inc.com</value>
+                <value id="lianlian-script-production" type="host">secure-checkout.lianlianpay.com</value>
+                <value id="lianlian-script-cardinal" type="host">*.cardinalcommerce.com</value>
+                <value id="lianlian-script-llpay-api-sandbox" type="host">celer-api.lianlianpay-inc.com</value>
+                <value id="lianlian-script-llpay-api-production" type="host">gpapi.lianlianpay.com</value>
+                <value id="lianlian-script-unsafe-inline" type="host">unsafe-inline</value>
+                <value id="lianlian-script-unsafe-eval" type="host">unsafe-eval</value>
+            </values>
+        </policy>
+        <policy id="connect-src">
+            <values>
+                <value id="lianlian-connect-sandbox" type="host">*.lianlianpay-inc.com</value>
+                <value id="lianlian-connect-production" type="host">*.lianlianpay.com</value>
+            </values>
+        </policy>
+        <policy id="frame-src">
+            <values>
+                <value id="lianlian-frame-sandbox" type="host">*.lianlianpay-inc.com</value>
+                <value id="lianlian-frame-production" type="host">*.lianlianpay.com</value>
+                <value id="lianlian-frame-cardinal" type="host">*.cardinalcommerce.com</value>
+            </values>
+        </policy>
+        <policy id="form-action">
+            <values>
+                <value id="lianlian-form-sandbox" type="host">*.lianlianpay-inc.com</value>
+                <value id="lianlian-form-production" type="host">*.lianlianpay.com</value>
+            </values>
+        </policy>
+        <policy id="style-src">
+            <values>
+                <value id="lianlian-style-sandbox" type="host">*.lianlianpay-inc.com</value>
+                <value id="lianlian-style-production" type="host">*.lianlianpay.com</value>
+                <value id="unsafe-inline-style" type="host">unsafe-inline</value>
+            </values>
+        </policy>
+        <policy id="img-src">
+            <values>
+                <value id="lianlian-img-production" type="host">*.lianlianpay.com</value>
+            </values>
+        </policy>
+    </policies>
+</csp_whitelist>

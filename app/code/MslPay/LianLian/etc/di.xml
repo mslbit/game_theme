@@ -1,0 +1,148 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * MslPay LianLian Module - DI Configuration
+ *
+ * 连连支付收银台模式（Checkout）：获取 payment_url，整页跳转
+ *
+ * 架构：Braintree 管道-过滤器模式
+ * GatewayCommand: Builder → TransferFactory → Client → Validator → Handler
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!-- Logger -->
+    <virtualType name="LLLogger" type="Magento\Payment\Model\Method\Logger">
+        <arguments>
+            <argument name="logger" xsi:type="object">Psr\Log\LoggerInterface</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Config -->
+    <virtualType name="LLCheckoutConfig" type="MslPay\LianLian\Gateway\Config\Config">
+        <arguments>
+            <argument name="methodCode" xsi:type="const">MslPay\LianLian\Model\Ui\ConfigProvider::CODE_CHECKOUT</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Value Handler Pool -->
+    <virtualType name="LLCheckoutValueHandlerPool" type="Magento\Payment\Gateway\Config\ValueHandlerPool">
+        <arguments>
+            <argument name="handlers" xsi:type="array">
+                <item name="default" xsi:type="string">LLCheckoutConfigValueHandler</item>
+            </argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="LLCheckoutConfigValueHandler" type="Magento\Payment\Gateway\Config\ConfigValueHandler">
+        <arguments>
+            <argument name="configInterface" xsi:type="object">LLCheckoutConfig</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Validator Pool -->
+    <virtualType name="LLCheckoutValidatorPool" type="Magento\Payment\Gateway\Validator\ValidatorPool">
+        <arguments>
+            <argument name="validators" xsi:type="array">
+                <item name="country" xsi:type="string">LLCheckoutCountryValidator</item>
+            </argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="LLCheckoutCountryValidator" type="Magento\Payment\Gateway\Validator\CountryValidator">
+        <arguments>
+            <argument name="config" xsi:type="object">LLCheckoutConfig</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Request Builder -->
+    <virtualType name="LLCheckoutTransactionBuilder" type="MslPay\LianLian\Gateway\Request\Builder\TransactionBuilder">
+        <arguments>
+            <argument name="config" xsi:type="object">LLCheckoutConfig</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="LLCheckoutRequest" type="Magento\Payment\Gateway\Request\BuilderComposite">
+        <arguments>
+            <argument name="builders" xsi:type="array">
+                <item name="transaction" xsi:type="string">LLCheckoutTransactionBuilder</item>
+                <item name="order" xsi:type="string">MslPay\LianLian\Gateway\Request\Builder\OrderBuilder</item>
+                <item name="customer" xsi:type="string">MslPay\LianLian\Gateway\Request\Builder\CustomerBuilder</item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <!-- TransferFactory -->
+    <virtualType name="LLCheckoutTransferFactory" type="MslPay\LianLian\Gateway\Http\TransferFactory">
+        <arguments>
+            <argument name="config" xsi:type="object">LLCheckoutConfig</argument>
+            <argument name="signatureHelper" xsi:type="object">MslPay\LianLian\Gateway\Helper\LianLianSignatureHelper</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Response Validator -->
+    <virtualType name="LLCheckoutResponseValidator" type="MslPay\LianLian\Gateway\Validator\ResponseValidator">
+        <arguments>
+            <argument name="config" xsi:type="object">LLCheckoutConfig</argument>
+            <argument name="signatureHelper" xsi:type="object">MslPay\LianLian\Gateway\Helper\LianLianSignatureHelper</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Handler Chain -->
+    <virtualType name="LLCheckoutHandler" type="Magento\Payment\Gateway\Response\HandlerChain">
+        <arguments>
+            <argument name="handlers" xsi:type="array">
+                <item name="payment_details" xsi:type="string">MslPay\LianLian\Gateway\Response\Handler\PaymentDetailsHandler</item>
+                <item name="3d_secure" xsi:type="string">MslPay\LianLian\Gateway\Response\Handler\ThreeDSecureHandler</item>
+                <item name="login_state" xsi:type="string">MslPay\LianLian\Gateway\Response\Handler\LoginStateHandler</item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Authorize Command -->
+    <virtualType name="LLCheckoutAuthorizeCommand" type="MslPay\LianLian\Gateway\Command\GatewayCommand">
+        <arguments>
+            <argument name="requestBuilder" xsi:type="object">LLCheckoutRequest</argument>
+            <argument name="transferFactory" xsi:type="object">LLCheckoutTransferFactory</argument>
+            <argument name="client" xsi:type="object">MslPay\LianLian\Gateway\Http\Client</argument>
+            <argument name="validator" xsi:type="object">LLCheckoutResponseValidator</argument>
+            <argument name="handler" xsi:type="object">LLCheckoutHandler</argument>
+            <argument name="requestValidator" xsi:type="object">MslPay\LianLian\Gateway\Validator\Request\CheckoutRequiredFieldValidator</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Command Pool -->
+    <virtualType name="LLCheckoutCommandPool" type="Magento\Payment\Gateway\Command\CommandPool">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="authorize" xsi:type="string">LLCheckoutAuthorizeCommand</item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Payment Facade -->
+    <virtualType name="LLCheckoutFacade" type="Magento\Payment\Model\Method\Adapter">
+        <arguments>
+            <argument name="code" xsi:type="const">MslPay\LianLian\Model\Ui\ConfigProvider::CODE_CHECKOUT</argument>
+            <argument name="formBlockType" xsi:type="string">Magento\Payment\Block\Form</argument>
+            <argument name="infoBlockType" xsi:type="string">MslPay\LianLian\Block\Info</argument>
+            <argument name="valueHandlerPool" xsi:type="object">LLCheckoutValueHandlerPool</argument>
+            <argument name="validatorPool" xsi:type="object">LLCheckoutValidatorPool</argument>
+            <argument name="commandPool" xsi:type="object">LLCheckoutCommandPool</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- ConfigProvider -->
+    <type name="MslPay\LianLian\Model\Ui\ConfigProvider">
+        <arguments>
+            <argument name="checkoutConfig" xsi:type="object">LLCheckoutConfig</argument>
+        </arguments>
+    </type>
+
+    <!-- Web API -->
+    <preference for="MslPay\LianLian\Api\NotificationInterface"
+                type="MslPay\LianLian\Model\Notification" />
+    <preference for="MslPay\LianLian\Api\PayUrlInterface"
+                type="MslPay\LianLian\Model\PayUrl" />
+    <preference for="MslPay\LianLian\Api\PaymentQueryInterface"
+                type="MslPay\LianLian\Model\PaymentQuery" />
+
+</config>

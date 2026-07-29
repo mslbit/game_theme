@@ -2,8 +2,8 @@
 /**
  * Oceanpayment Google Pay 嵌入式支付模板
  *
- * 包含 Google Pay 按钮容器和 Place Order 按钮。
- * Google Pay SDK 会在 #oceanpayment-googlepayelement 容器中渲染原生 Google Pay 按钮。
+ * Google Pay SDK 在 #oceanpayment-googlepayelement 容器中渲染原生按钮，
+ * 用户点击按钮后通过回调完成下单，无需 Place Order 按钮。
  */
 -->
 <div class="payment-method" data-bind="css: {'_active': (getCode() == isChecked())}, afterRender: opinputInit">
@@ -19,6 +19,30 @@
                  style="height: 24px; vertical-align: middle; margin-left: 8px;" />
         </label>
     </div>
+    <div class="payment-method-content">
+
+        <!-- ko foreach: getRegion('messages') -->
+        <!-- ko template: getTemplate() --><!-- /ko -->
+        <!--/ko-->
+        <div class="payment-method-billing-address">
+            <!-- ko foreach: $parent.getRegion(getBillingAddressFormName()) -->
+            <!-- ko template: getTemplate() --><!-- /ko -->
+            <!--/ko-->
+        </div>
+
+        <fieldset>
+            <!-- Google Pay 按钮容器，SDK 会自动渲染到此元素 -->
+            <div id="oceanpayment-googlepayelement"></div>
+        </fieldset>
+
+        <div class="checkout-agreements-block">
+            <!-- ko foreach: $parent.getRegion('before-place-order') -->
+                <!-- ko template: getTemplate() --><!-- /ko -->
+            <!--/ko-->
+        </div>
+
+    </div>
+</div>
     <div class="payment-method-content">
 
         <!-- ko foreach: getRegion('messages') -->

@@ -5,8 +5,9 @@ namespace Oceanpayment\Payment\Observer;
 
 use Magento\Framework\Event\Observer;
 use Magento\Framework\Event\ObserverInterface;
+use Magento\Sales\Api\Data\OrderPaymentInterface;
 use Magento\Sales\Model\Order;
-use Magento\Sales\Model\Order\Payment;
+use Oceanpayment\Payment\Gateway\Service\PaymentSuccessService;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -16,72 +17,67 @@ use Psr\Log\LoggerInterface;
  * authorize 命令已执行，支付状态已保存到 additionalInformation。
  *
  * 根据 payment_status 设置订单状态：
- * - 支付成功（SendTradeCommand payment_status=1 或 EmbeddedCaptureCommand 非 pending）：
- *   调 registerCaptureNotification 完成支付，订单进入 PROCESSING
- * - 非 PS：设为 pending_payment，等异步通知确认
+ * - 支付成功：委托 PaymentSuccessService 统一处理（capture + 邮件 + 事件）
+ * - 非成功：设为 pending_payment，等异步通知确认
  *
- * 替代原自定义 AuthorizeCommand（全局替换 AuthorizeOperation 的 stateCommand），
- * 改用事件观察者方式，不影响其他支付方式。
+ * 与 CallbackProcessor 的成功路径统一走 PaymentSuccessService，
+ * 保证开票、邮件、事件分发逻辑一致。
  */
 class PaymentPlaceEndObserver implements ObserverInterface
 {
-    /**
-     * Oceanpayment 嵌入式支付方式代码列表
-     */
     private const OCEANPAYMENT_METHODS = [
         'oceanpayment_creditcard',
         'oceanpayment_applepay',
         'oceanpayment_googlepay',
     ];
 
+    private PaymentSuccessService $paymentSuccessService;
     private LoggerInterface $logger;
 
-    public function __construct(LoggerInterface $logger)
-    {
+    public function __construct(
+        PaymentSuccessService $paymentSuccessService,
+        LoggerInterface $logger
+    ) {
+        $this->paymentSuccessService = $paymentSuccessService;
         $this->logger = $logger;
     }
 
     public function execute(Observer $observer): void
     {
-        /** @var Payment $payment */
         $payment = $observer->getEvent()->getPayment();
-        if (!$payment instanceof Payment) {
+        if (!$payment instanceof OrderPaymentInterface) {
             return;
         }
 
-        /* 只处理 Oceanpayment 支付方式 */
         if (!in_array($payment->getMethod(), self::OCEANPAYMENT_METHODS, true)) {
             return;
         }
 
         $order = $payment->getOrder();
 
-        /* 抑制下单邮件通知（等异步通知确认后再发） */
+        /* 抑制下单邮件通知（PaymentSuccessService 内部会在 capture 后发送） */
         $order->setCanSendNewEmailFlag(false);
 
         if ($this->isPaymentSuccess($payment)) {
-            $this->handlePaymentSuccess($payment, $order);
+            $this->handlePaymentSuccess($order);
         } else {
-            $this->handlePaymentPending($payment, $order);
+            $this->handlePaymentPending($order);
         }
     }
 
     /**
      * 判断支付是否成功
      *
-     * 两种数据来源：
-     * - SendTradeCommand（收银台跳转）：oceanpayment_payment_status = '1' 或 1
-     * - EmbeddedCaptureCommand（嵌入式查询）：isTransactionPending = false 表示成功
+     * - SendTradeCommand：oceanpayment_payment_status = '1' 或 1
+     * - EmbeddedCaptureCommand：isTransactionPending=false 表示成功
      */
-    private function isPaymentSuccess(Payment $payment): bool
+    private function isPaymentSuccess(OrderPaymentInterface $payment): bool
     {
-        /* SendTradeCommand 路径：payment_status 为数字，1=成功 */
         $paymentStatus = $payment->getAdditionalInformation('oceanpayment_payment_status');
         if ($paymentStatus === '1' || $paymentStatus === 1) {
             return true;
         }
 
-        /* EmbeddedCaptureCommand 路径：isTransactionPending=false 表示 capture 成功 */
         if ($paymentStatus === null && !$payment->getIsTransactionPending()) {
             return true;
         }
@@ -90,27 +86,23 @@ class PaymentPlaceEndObserver implements ObserverInterface
     }
 
     /**
-     * 支付成功：调 registerCaptureNotification 完成支付
+     * 委托 PaymentSuccessService 统一处理
+     *
+     * PaymentSuccessService 负责：capture + invoice + 邮件 + oceanpayment_callback_after 事件
      */
-    private function handlePaymentSuccess(Payment $payment, Order $order): void
+    private function handlePaymentSuccess(Order $order): void
     {
-        $amount = (float) $order->getBaseTotalDue();
-        if ($amount <= 0) {
-            $amount = (float) $order->getBaseGrandTotal();
-        }
+        $this->paymentSuccessService->execute($order);
 
-        $payment->registerCaptureNotification($amount);
-
-        $this->logger->info('[Oceanpayment] PaymentPlaceEnd: success → registerCaptureNotification', [
+        $this->logger->info('[Oceanpayment] PaymentPlaceEnd: success → PaymentSuccessService', [
             'order' => $order->getIncrementId(),
-            'amount' => $amount,
         ]);
     }
 
     /**
-     * 非 PS：设为 pending_payment，等异步通知确认
+     * 非成功：设为 pending_payment，等异步通知确认
      */
-    private function handlePaymentPending(Payment $payment, Order $order): void
+    private function handlePaymentPending(Order $order): void
     {
         $order->setState(Order::STATE_PENDING_PAYMENT);
         $order->setStatus(Order::STATE_PENDING_PAYMENT);

@@ -27,10 +27,30 @@ define([
         },
 
         /**
+         * Apple Pay 是否可用（Safari + iOS 17+ / macOS 13+）
+         * 非苹果设备或版本不满足时，隐藏此支付方式
+         */
+        isApplePayAvailable: function () {
+            try {
+                return window.ApplePaySession
+                    && window.ApplePaySession.canMakePayments
+                    && window.ApplePaySession.canMakePayments();
+            } catch (e) {
+                return false;
+            }
+        },
+
+        /**
          * 初始化 Apple Pay SDK 和全局回调
          */
         opinputInit: function () {
             var self = this;
+
+            /* Apple Pay 仅在支持的苹果设备上可用 */
+            if (!this.isApplePayAvailable()) {
+                this.isPlaceOrderActionAllowed(false);
+                return;
+            }
 
             setTimeout(function () {
                 var methodConfig = (window.checkoutConfig.payment.oceanpayment_payment.methods || {})[self.getCode()] || {};

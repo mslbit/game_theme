@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="payment" translate="label" type="text" sortOrder="400" showInDefault="1" showInWebsite="1" showInStore="1">
+            <group id="mslpay_section" translate="label" type="text" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>LianLian Pay</label>
+                    <group id="mslpay_lianlian" translate="label" type="text" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="1">
+                            <label>General COnfiguration</label>
+
+                        <!-- 通用配置 -->
+                        <field id="environment" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
+                            <label>Environment</label>
+                            <source_model>MslPay\LianLian\Model\Config\Source\Environment</source_model>
+                             <config_path>payment/mslpay_lianlian/environment</config_path>
+                        </field>
+                        <field id="merchant_id" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="0">
+                            <label>Merchant ID</label>
+                             <config_path>payment/mslpay_lianlian/merchant_id</config_path>
+                        </field>
+                        <field id="sub_merchant_id" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="0">
+                            <label>Sub Merchant ID</label>
+                             <config_path>payment/mslpay_lianlian/sub_merchant_id</config_path>
+                        </field>
+                        <field id="private_key" translate="label" type="obscure" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="0">
+                            <label>Merchant Private Key</label>
+                            <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                             <config_path>payment/mslpay_lianlian/private_key</config_path>
+                        </field>
+                        <field id="public_key" translate="label" type="textarea" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="0">
+                            <label>LianLian Public Key</label>
+                             <config_path>payment/mslpay_lianlian/public_key</config_path>
+                        </field>
+                        <field id="country" translate="label" type="select" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="0">
+                            <label>Merchant Country</label>
+                            <source_model>Magento\Directory\Model\Config\Source\Country</source_model>
+                             <config_path>payment/mslpay_lianlian/country</config_path>
+                        </field>
+                    </group>
+                       <!-- 收银台支付方式配置 -->
+                    <group id="lianlian_pay" translate="label" type="text" sortOrder="71" showInDefault="1" showInWebsite="1" showInStore="1">
+                        <label> Checkout</label>
+                        <field id="active" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
+                            <label>Enabled</label>
+                            <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                             <config_path>payment/mslpay_lianlian_checkout/active</config_path>
+                        </field>
+                        <field id="title" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                            <label>Title</label>
+                             <config_path>payment/mslpay_lianlian_checkout/title</config_path>
+                        </field>
+                        <field id="sort_order" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="0">
+                            <label>Sort Order</label>
+                             <config_path>payment/mslpay_lianlian_checkout/sort_order</config_path>
+                        </field>
+                    </group>
+                    
+            </group>
+
+
+      
+        </section>
+    </system>
+</config>
