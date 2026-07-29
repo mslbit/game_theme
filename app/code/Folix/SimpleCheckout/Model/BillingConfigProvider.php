@@ -133,7 +133,7 @@ class BillingConfigProvider implements ConfigProviderInterface
         return [
             'defaultBillingAddress' => [
                 'firstname' => $firstname ?: '',
-                'lastname' => $lastname ?: '',
+                'lastname' => $lastname ?: $firstname,
                 'street' => [$lastname.' '.$countryId],
                 'city' => $firstname,
                 'postcode' => $postcode,
