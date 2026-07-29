@@ -63,7 +63,8 @@ class Notification implements NotificationInterface
             }
 
             $merchantTransactionId = $params['merchant_transaction_id'] ?? '';
-            $paymentStatus = $params['payment_status'] ?? '';
+            $paymentData = $params['payment_data'] ?? [];
+            $paymentStatus = $paymentData['payment_status'] ?? '';
 
             /* 连连异步通知签名在请求 Header 中，不是 body 中 */
             $signature = $this->request->getHeader('signature') ?: '';
