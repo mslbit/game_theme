@@ -68,16 +68,27 @@ class RefundNotify implements RefundNotifyInterface
             $refundData = $params['refund_data'] ?? [];
             $refundStatus = $refundData['refund_status'] ?? '';
 
+            $this->logger->info('[LianLian] RefundNotify parsed', [
+                'merchant_transaction_id' => $merchantTransactionId,
+                'refund_status' => $refundStatus,
+            ]);
+
             /* 连连异步通知签名在请求 Header 中 */
             $signature = $this->request->getHeader('signature') ?: '';
 
             if (empty($merchantTransactionId) || empty($signature)) {
-                $this->logger->error('[LianLian] RefundNotify missing required params');
+                $this->logger->error('[LianLian] RefundNotify missing required params', [
+                    'has_merchant_transaction_id' => !empty($merchantTransactionId),
+                    'has_signature' => !empty($signature),
+                ]);
                 return $this->jsonResponse('400', 'Missing required parameters');
             }
 
             /* 用连连公钥验签 */
-            if (!$this->signatureHelper->verify($params, $signature, $this->config->getLianLianPublicKey())) {
+            $verifyResult = $this->signatureHelper->verify($params, $signature, $this->config->getLianLianPublicKey());
+            $this->logger->info('[LianLian] RefundNotify signature verify result', ['result' => $verifyResult]);
+
+            if (!$verifyResult) {
                 $this->logger->error('[LianLian] RefundNotify signature verification failed', [
                     'merchant_transaction_id' => $merchantTransactionId,
                 ]);
@@ -121,6 +132,11 @@ class RefundNotify implements RefundNotifyInterface
             $parts = explode('-', $merchantTransactionId);
             $invoiceId = (int) end($parts);
         }
+
+        $this->logger->info('[LianLian] RefundNotify processRefundSuccess', [
+            'merchant_transaction_id' => $merchantTransactionId,
+            'invoice_id' => $invoiceId,
+        ]);
 
         if ($invoiceId <= 0) {
             $this->logger->error('[LianLian] RefundNotify cannot extract invoice_id', [
