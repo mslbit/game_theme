@@ -8,10 +8,11 @@ use Magento\Framework\App\Action\HttpPostActionInterface;
 use Magento\Framework\App\CsrfAwareActionInterface;
 use Magento\Framework\App\Request\InvalidRequestException;
 use Magento\Framework\App\RequestInterface;
+use Magento\Framework\Api\SearchCriteriaBuilder;
 use Magento\Framework\Controller\ResultFactory;
 use Magento\Framework\Controller\ResultInterface;
 use Magento\Checkout\Model\Session as CheckoutSession;
-use MslPay\LianLian\Api\PaymentQueryInterface;
+use Magento\Sales\Api\OrderRepositoryInterface;
 use MslPay\LianLian\Gateway\Config\Config;
 use MslPay\LianLian\Gateway\Helper\LianLianSignatureHelper;
 use Psr\Log\LoggerInterface;
@@ -23,18 +24,18 @@ use Psr\Log\LoggerInterface;
  *
  * 处理逻辑：
  * 1. 无参数（GET 重定向无数据）→ 直接跳转成功页
- * 2. 有参数 → 验签 → 调 PaymentQuery 查询支付状态
- *    - PS → 跳转成功页
- *    - 非 PS → 跳转失败页
+ * 2. 有参数 → 验签（缺签名或验不过 → 失败页）
+ * 3. 验签通过 → 查本地订单设置 checkout session → 跳转成功页
  *
- * PaymentQuery 内部：如果查询结果为 PS，会调 PaymentSuccessService 执行 capture
+ * 不再请求连连查询 API，capture/开票完全由异步通知（Notification）完成
  */
 class Back implements HttpPostActionInterface, HttpGetActionInterface, CsrfAwareActionInterface
 {
     private RequestInterface $request;
     private ResultFactory $resultFactory;
     private CheckoutSession $checkoutSession;
-    private PaymentQueryInterface $paymentQuery;
+    private OrderRepositoryInterface $orderRepository;
+    private SearchCriteriaBuilder $searchCriteriaBuilder;
     private Config $config;
     private LianLianSignatureHelper $signatureHelper;
     private LoggerInterface $logger;
@@ -43,7 +44,8 @@ class Back implements HttpPostActionInterface, HttpGetActionInterface, CsrfAware
         RequestInterface $request,
         ResultFactory $resultFactory,
         CheckoutSession $checkoutSession,
-        PaymentQueryInterface $paymentQuery,
+        OrderRepositoryInterface $orderRepository,
+        SearchCriteriaBuilder $searchCriteriaBuilder,
         Config $config,
         LianLianSignatureHelper $signatureHelper,
         LoggerInterface $logger
@@ -51,7 +53,8 @@ class Back implements HttpPostActionInterface, HttpGetActionInterface, CsrfAware
         $this->request = $request;
         $this->resultFactory = $resultFactory;
         $this->checkoutSession = $checkoutSession;
-        $this->paymentQuery = $paymentQuery;
+        $this->orderRepository = $orderRepository;
+        $this->searchCriteriaBuilder = $searchCriteriaBuilder;
         $this->config = $config;
         $this->signatureHelper = $signatureHelper;
         $this->logger = $logger;
@@ -71,53 +74,54 @@ class Back implements HttpPostActionInterface, HttpGetActionInterface, CsrfAware
             return $this->redirectSuccess();
         }
 
-        /* 验签 */
-        if (!empty($signature)) {
-            $paramsForVerify = $params;
-            unset($paramsForVerify['signature']);
-            if (!$this->signatureHelper->verify($paramsForVerify, $signature, $this->config->getLianLianPublicKey())) {
-                $this->logger->error('[LianLian] Back signature verification failed');
-                return $this->redirectFailure('Signature verification failed');
-            }
+        /* 有参数必须验签：缺签名或验不过 → 失败页 */
+        if (empty($signature)) {
+            $this->logger->error('[LianLian] Back: missing signature');
+            return $this->redirectFailure('Missing signature');
         }
 
-        /* 调 PaymentQuery 查询支付状态（内部会验订单存在、PS 时调 PaymentSuccessService） */
+        $paramsForVerify = $params;
+        unset($paramsForVerify['signature']);
+        if (!$this->signatureHelper->verify($paramsForVerify, $signature, $this->config->getLianLianPublicKey())) {
+            $this->logger->error('[LianLian] Back signature verification failed');
+            return $this->redirectFailure('Signature verification failed');
+        }
+
+        /* 验签通过 → 查本地订单（不请求连连 API，capture 由异步通知完成） */
+        $order = $this->findOrderByIncrementId($merchantTransactionId);
+        if (!$order) {
+            $this->logger->error('[LianLian] Back: order not found', [
+                'merchant_transaction_id' => $merchantTransactionId,
+            ]);
+            return $this->redirectFailure('Order not found: ' . $merchantTransactionId);
+        }
+
+        $this->checkoutSession
+            ->setLastQuoteId($order->getQuoteId())
+            ->setLastSuccessQuoteId($order->getQuoteId())
+            ->setLastOrderId($order->getEntityId())
+            ->setLastRealOrderId($order->getIncrementId());
+
+        return $this->redirectSuccess();
+    }
+
+    /**
+     * 按订单号查找本地订单
+     *
+     * @return \Magento\Sales\Api\Data\OrderInterface|null
+     */
+    private function findOrderByIncrementId(string $incrementId)
+    {
         try {
-            $result = $this->paymentQuery->query($merchantTransactionId);
+            $searchCriteria = $this->searchCriteriaBuilder
+                ->addFilter('increment_id', $incrementId)
+                ->create();
+            $orders = $this->orderRepository->getList($searchCriteria)->getItems();
+            return !empty($orders) ? reset($orders) : null;
         } catch (\Exception $e) {
-            $this->logger->error('[LianLian] Back query failed', ['error' => $e->getMessage()]);
-            return $this->redirectFailure('Payment query failed');
+            $this->logger->error('[LianLian] Back: order lookup failed', ['error' => $e->getMessage()]);
+            return null;
         }
-
-        $returnCode = $result['return_code'] ?? '';
-        if ($returnCode !== 'SUCCESS') {
-            return $this->redirectFailure('Query failed: ' . ($result['return_message'] ?? ''));
-        }
-
-        $paymentStatus = $result['order']['payment_data']['payment_status'] ?? '';
-
-        /* 从 PaymentQuery 返回结果中取订单对象，设置完整 checkout session */
-        $order = $result['_order'] ?? null;
-        if ($order) {
-            $this->checkoutSession
-                ->setLastQuoteId($order->getQuoteId())
-                ->setLastOrderId($order->getEntityId())
-                ->setLastRealOrderId($order->getIncrementId());
-        }
-
-        if ($paymentStatus === 'PS') {
-            if ($order) {
-                $this->checkoutSession->setLastSuccessQuoteId($order->getQuoteId());
-            }
-            return $this->redirectSuccess();
-        }
-
-        /* 非 PS：恢复 quote 允许重试 */
-        $this->checkoutSession->restoreQuote();
-        $this->checkoutSession->setErrorMessage(
-            (string) __('Payment failed or is pending. Status: %1', $paymentStatus)
-        );
-        return $this->redirectFailure('Payment status: ' . $paymentStatus);
     }
 
     private function redirectSuccess(): ResultInterface

@@ -126,13 +126,14 @@ class PaymentQuery implements PaymentQueryInterface
                 throw new \RuntimeException('Invalid response from LianLian payment query API');
             }
 
-            /* 验签响应 */
+            /* 验签响应：失败时中断处理，防止使用被篡改的响应数据 */
             $responseSignature = $response->getHeaderLine('signature');
             if (!empty($responseSignature)) {
                 if (!$this->signatureHelper->verify($result, $responseSignature, $this->config->getLianLianPublicKey())) {
                     $this->logger->error('[LianLian] PaymentQuery: response signature verification failed', [
                         'merchant_transaction_id' => $merchantTransactionId,
                     ]);
+                    throw new \RuntimeException('LianLian payment query response signature verification failed');
                 }
             }
 

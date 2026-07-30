@@ -1,0 +1,25 @@
+<?php
+/**
+ * 连连支付后台信息模板
+ *
+ * 在后台订单详情页显示连连支付的交易信息
+ */
+?>
+<?php
+/** @var \MslPay\LianLian\Block\LianLianInfo $block */
+?>
+<dl class="payment-method">
+    <dt class="title"><?= $block->escapeHtml($block->getMethod()->getTitle()) ?></dt>
+    <?php if ($block->getInfo()->getAdditionalInformation('lianlian_transaction_id')): ?>
+    <dd class="content">
+        <strong><?= $block->escapeHtml(__('Transaction ID')) ?>:</strong>
+        <?= $block->escapeHtml($block->getInfo()->getAdditionalInformation('lianlian_transaction_id')) ?>
+    </dd>
+    <?php endif; ?>
+    <?php if ($block->getInfo()->getAdditionalInformation('lianlian_payment_status')): ?>
+    <dd class="content">
+        <strong><?= $block->escapeHtml(__('Payment Status')) ?>:</strong>
+        <?= $block->escapeHtml($block->getInfo()->getAdditionalInformation('lianlian_payment_status')) ?>
+    </dd>
+    <?php endif; ?>
+</dl>

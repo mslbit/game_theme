@@ -70,12 +70,10 @@ class ThreeDSecureHandler implements HandlerInterface
             ]);
             return;
         }
- file_put_contents(BP.'/var/res3.log','pay',FILE_APPEND);
         if (empty($paymentUrl)) {
             return;
         }
 
-         file_put_contents(BP.'/var/res3.log',print_r($paymentUrl,true).print_r($orderData,true),FILE_APPEND);
         /* 以 quote_id 为 key 缓存，前端 placeOrder 后可按 quote 读取 */
         $quoteId = $paymentDO->getOrder()->getQuoteId();
         $this->cache->save(
