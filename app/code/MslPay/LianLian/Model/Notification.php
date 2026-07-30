@@ -119,7 +119,8 @@ class Notification implements NotificationInterface
 
         } catch (\Exception $e) {
             $this->logger->error('[LianLian] Notification exception: {message}', ['message' => $e->getMessage()]);
-            $body = json_encode(['code' => '500', 'message' => $e->getMessage()]);
+            $body = json_encode(['code' => '401', 'message' => $e->getMessage()]);
+            $this->response->setHttpResponseCode(401);
         }
 
         /* 直接输出 JSON 并中断 Magento Webapi 渲染 */

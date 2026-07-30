@@ -5,60 +5,110 @@
         <section id="payment" translate="label" type="text" sortOrder="400" showInDefault="1" showInWebsite="1" showInStore="1">
             <group id="mslpay_section" translate="label" type="text" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>LianLian Pay</label>
-                    <group id="mslpay_lianlian" translate="label" type="text" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="1">
-                            <label>General COnfiguration</label>
 
-                        <!-- 通用配置 -->
-                        <field id="environment" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
-                            <label>Environment</label>
-                            <source_model>MslPay\LianLian\Model\Config\Source\Environment</source_model>
-                             <config_path>payment/mslpay_lianlian/environment</config_path>
-                        </field>
-                        <field id="merchant_id" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="0">
-                            <label>Merchant ID</label>
-                             <config_path>payment/mslpay_lianlian/merchant_id</config_path>
-                        </field>
-                        <field id="sub_merchant_id" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="0">
-                            <label>Sub Merchant ID</label>
-                             <config_path>payment/mslpay_lianlian/sub_merchant_id</config_path>
-                        </field>
-                        <field id="private_key" translate="label" type="obscure" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="0">
-                            <label>Merchant Private Key</label>
-                            <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
-                             <config_path>payment/mslpay_lianlian/private_key</config_path>
-                        </field>
-                        <field id="public_key" translate="label" type="textarea" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="0">
-                            <label>LianLian Public Key</label>
-                             <config_path>payment/mslpay_lianlian/public_key</config_path>
-                        </field>
-                        <field id="country" translate="label" type="select" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="0">
-                            <label>Merchant Country</label>
-                            <source_model>Magento\Directory\Model\Config\Source\Country</source_model>
-                             <config_path>payment/mslpay_lianlian/country</config_path>
-                        </field>
-                    </group>
-                       <!-- 收银台支付方式配置 -->
-                    <group id="lianlian_pay" translate="label" type="text" sortOrder="71" showInDefault="1" showInWebsite="1" showInStore="1">
-                        <label> Checkout</label>
-                        <field id="active" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
-                            <label>Enabled</label>
-                            <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                             <config_path>payment/mslpay_lianlian_checkout/active</config_path>
-                        </field>
-                        <field id="title" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
-                            <label>Title</label>
-                             <config_path>payment/mslpay_lianlian_checkout/title</config_path>
-                        </field>
-                        <field id="sort_order" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="0">
-                            <label>Sort Order</label>
-                             <config_path>payment/mslpay_lianlian_checkout/sort_order</config_path>
-                        </field>
-                    </group>
-                    
+                <group id="mslpay_lianlian" translate="label" type="text" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>General Configuration</label>
+                    <attribute type="expanded">1</attribute>
+                    <frontend_model>Magento\Config\Block\System\Config\Form\Fieldset</frontend_model>
+
+                    <!-- 环境切换 -->
+                    <field id="environment" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Environment</label>
+                        <source_model>MslPay\LianLian\Model\Config\Source\Environment</source_model>
+                        <config_path>payment/mslpay_lianlian/environment</config_path>
+                        <comment>Select Sandbox for testing, Production for live transactions.</comment>
+                    </field>
+
+                    <!-- Sandbox 凭证 -->
+                    <field id="sandbox_merchant_id" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Sandbox Merchant ID</label>
+                        <config_path>payment/mslpay_lianlian/sandbox_merchant_id</config_path>
+                        <depends>
+                            <field id="environment">sandbox</field>
+                        </depends>
+                    </field>
+                    <field id="sandbox_sub_merchant_id" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Sandbox Sub Merchant ID</label>
+                        <config_path>payment/mslpay_lianlian/sandbox_sub_merchant_id</config_path>
+                        <depends>
+                            <field id="environment">sandbox</field>
+                        </depends>
+                    </field>
+                    <field id="sandbox_private_key" translate="label" type="obscure" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Sandbox Merchant Private Key</label>
+                        <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                        <config_path>payment/mslpay_lianlian/sandbox_private_key</config_path>
+                        <depends>
+                            <field id="environment">sandbox</field>
+                        </depends>
+                    </field>
+                    <field id="sandbox_public_key" translate="label" type="textarea" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Sandbox LianLian Public Key</label>
+                        <config_path>payment/mslpay_lianlian/sandbox_public_key</config_path>
+                        <depends>
+                            <field id="environment">sandbox</field>
+                        </depends>
+                    </field>
+
+                    <!-- Production 凭证 -->
+                    <field id="production_merchant_id" translate="label" type="text" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Production Merchant ID</label>
+                        <config_path>payment/mslpay_lianlian/production_merchant_id</config_path>
+                        <depends>
+                            <field id="environment">production</field>
+                        </depends>
+                    </field>
+                    <field id="production_sub_merchant_id" translate="label" type="text" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Production Sub Merchant ID</label>
+                        <config_path>payment/mslpay_lianlian/production_sub_merchant_id</config_path>
+                        <depends>
+                            <field id="environment">production</field>
+                        </depends>
+                    </field>
+                    <field id="production_private_key" translate="label" type="obscure" sortOrder="80" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Production Merchant Private Key</label>
+                        <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                        <config_path>payment/mslpay_lianlian/production_private_key</config_path>
+                        <depends>
+                            <field id="environment">production</field>
+                        </depends>
+                    </field>
+                    <field id="production_public_key" translate="label" type="textarea" sortOrder="90" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Production LianLian Public Key</label>
+                        <config_path>payment/mslpay_lianlian/production_public_key</config_path>
+                        <depends>
+                            <field id="environment">production</field>
+                        </depends>
+                    </field>
+
+                    <!-- 共通配置（不随环境切换） -->
+                    <field id="country" translate="label" type="select" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Merchant Country</label>
+                        <source_model>Magento\Directory\Model\Config\Source\Country</source_model>
+                        <config_path>payment/mslpay_lianlian/country</config_path>
+                    </field>
+                </group>
+
+                <!-- 收银台支付方式配置 -->
+                <group id="lianlian_pay" translate="label" type="text" sortOrder="71" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Checkout</label>
+                    <field id="active" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Enabled</label>
+                        <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                        <config_path>payment/mslpay_lianlian_checkout/active</config_path>
+                    </field>
+                    <field id="title" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                        <label>Title</label>
+                        <config_path>payment/mslpay_lianlian_checkout/title</config_path>
+                    </field>
+                    <field id="sort_order" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="0">
+                        <label>Sort Order</label>
+                        <config_path>payment/mslpay_lianlian_checkout/sort_order</config_path>
+                        <frontend_class>validate-number</frontend_class>
+                    </field>
+                </group>
+
             </group>
-
-
-      
         </section>
     </system>
 </config>

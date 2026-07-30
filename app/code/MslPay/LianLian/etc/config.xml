@@ -7,10 +7,14 @@
             <!-- 连连支付通用配置（共享配置段） -->
             <mslpay_lianlian>
                 <environment>sandbox</environment>
-                <merchant_id/>
-                <sub_merchant_id/>
-                <private_key backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
-                <public_key/>
+                <sandbox_merchant_id/>
+                <sandbox_sub_merchant_id/>
+                <sandbox_private_key backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
+                <sandbox_public_key/>
+                <production_merchant_id/>
+                <production_sub_merchant_id/>
+                <production_private_key backend_model="Magento\Config\Model\Config\Backend\Encrypted"/>
+                <production_public_key/>
                 <country>HK</country>
             </mslpay_lianlian>
 
@@ -34,10 +38,8 @@
                 <allowspecific>0</allowspecific>
                 <specificcountry/>
                 <sort_order>70</sort_order>
-
             </mslpay_lianlian_checkout>
 
-       
         </payment>
 
     </default>

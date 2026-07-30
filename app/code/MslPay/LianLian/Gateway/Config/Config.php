@@ -19,11 +19,18 @@ class Config implements ConfigInterface
     private const KEY_TITLE = 'title';
     private const KEY_SORT_ORDER = 'sort_order';
     private const KEY_ENVIRONMENT = 'environment';
-    private const KEY_MERCHANT_ID = 'merchant_id';
-    private const KEY_SUB_MERCHANT_ID = 'sub_merchant_id';
-    private const KEY_PRIVATE_KEY = 'private_key';
-    private const KEY_PUBLIC_KEY = 'public_key';
     private const KEY_COUNTRY = 'country';
+
+    /**
+     * 按环境区分的共享配置字段映射
+     * 键为业务语义名，值为 [sandbox_path, production_path]
+     */
+    private const ENVIRONMENT_FIELDS = [
+        'merchant_id'     => ['sandbox_merchant_id',     'production_merchant_id'],
+        'sub_merchant_id' => ['sandbox_sub_merchant_id', 'production_sub_merchant_id'],
+        'private_key'     => ['sandbox_private_key',     'production_private_key'],
+        'public_key'      => ['sandbox_public_key',      'production_public_key'],
+    ];
 
     private const DEFAULT_PATH_PATTERN = 'payment/%s/%s';
     private const SHARED_CONFIG_PREFIX = 'payment/mslpay_lianlian';
@@ -98,27 +105,50 @@ class Config implements ConfigInterface
 
     public function getMerchantId(): string
     {
-        return $this->getSharedValue(self::KEY_MERCHANT_ID);
+        return $this->getEnvironmentBasedValue('merchant_id');
     }
 
     public function getSubMerchantId(): string
     {
-        return $this->getSharedValue(self::KEY_SUB_MERCHANT_ID);
+        return $this->getEnvironmentBasedValue('sub_merchant_id');
     }
 
     public function getPrivateKey(): string
     {
-        return $this->getSharedValue(self::KEY_PRIVATE_KEY);
+        return $this->getEnvironmentBasedValue('private_key');
     }
 
     public function getLianLianPublicKey(): string
     {
-        return $this->getSharedValue(self::KEY_PUBLIC_KEY);
+        return $this->getEnvironmentBasedValue('public_key');
     }
 
     public function getCountry(): string
     {
         return $this->getSharedValue(self::KEY_COUNTRY);
+    }
+
+    /**
+     * 根据当前环境自动获取对应的共享配置值
+     *
+     * 从 mslpay_lianlian 配置段中，根据 environment 字段
+     * 自动选择 sandbox_* 或 production_* 前缀的配置项
+     *
+     * @param string $field 字段名（如 merchant_id, private_key）
+     * @return string 配置值
+     */
+    private function getEnvironmentBasedValue(string $field): string
+    {
+        if (!isset(self::ENVIRONMENT_FIELDS[$field])) {
+            return '';
+        }
+
+        $isSandbox = $this->isSandbox();
+        $pathKey = $isSandbox
+            ? self::ENVIRONMENT_FIELDS[$field][0]
+            : self::ENVIRONMENT_FIELDS[$field][1];
+
+        return (string) $this->getSharedValue($pathKey);
     }
 
     private const COUNTRY_TIMEZONE_MAP = [
