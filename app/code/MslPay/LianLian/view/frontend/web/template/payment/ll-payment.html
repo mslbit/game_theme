@@ -48,7 +48,7 @@
                             click: placeOrder,
                             attr: {title: $t('Place Order')},
                             css: {disabled: !isPlaceOrderActionAllowed()},
-                            enable: isPlaceOrderActionAllowed()"
+                            enable: (getCode() == isChecked())"
                         disabled>
                     <span data-bind="i18n: 'Place Order'"></span>
                 </button>

@@ -69,6 +69,9 @@ define([
                     tryInit();
                 };
                 document.head.appendChild(script);
+               if(quote.paymentMethod()) {
+                 self.isPlaceOrderActionAllowed(true);
+               }
             }, 300);
         },
 
@@ -220,6 +223,8 @@ define([
             var methods = window.checkoutConfig.payment.oceanpayment_payment.methods || {};
             var methodConfig = methods[this.getCode()] || {};
             return methodConfig.title || this._super();
-        }
+        },
+        
+         
     });
 });

@@ -183,6 +183,10 @@ define([
             var methods = window.checkoutConfig.payment.oceanpayment_payment.methods || {};
             var methodConfig = methods[this.getCode()] || {};
             return methodConfig.title || this._super();
+        },
+         selectPaymentMethod: function() {
+            this._super();
+            this.isPlaceOrderActionAllowed(true);
         }
     });
 });
