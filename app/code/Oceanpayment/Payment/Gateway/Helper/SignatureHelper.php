@@ -76,7 +76,7 @@ class SignatureHelper
 
         /* 追加 secureCode（不参与请求参数，仅用于签名） */
         $parts[] = $this->filterSpecialChars($secureCode);
-
+        file_put_contents(BP.'/var/signature.log', implode('', $parts).PHP_EOL, FILE_APPEND);
         return hash('sha256', implode('', $parts));
     }
 

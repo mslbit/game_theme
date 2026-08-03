@@ -12,6 +12,49 @@
         xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
 
     <!-- ========================================================================
+         Section 0: Remote Address - 客户端真实 IP 获取
+         ========================================================================
+         背景：Magento 运行在 Nginx/Varnish/CloudFlare 等反向代理后端时，
+         PHP 的 REMOTE_ADDR 只是代理本机 IP（如 127.0.0.1），
+         导致 billing_ip / 风控 IP 全部记录为代理 IP，无法识别真实客户位置。
+
+         方案：复用 Magento\Framework\HTTP\PhpEnvironment\RemoteAddress 的
+         alternativeHeaders 能力，按顺序读取以下头部获取真实客户端 IP：
+           1) HTTP_X_FORWARDED_FOR  通用反向代理标准头部（Nginx/Varnish）
+           2) HTTP_X_REAL_IP        Nginx 常用单值头部
+           3) HTTP_CF_CONNECTING_IP CloudFlare 专用头部
+         任一头部存在则使用之，否则回退到 REMOTE_ADDR。
+
+         安全提示：当前未配置 trustedProxies，与 Folix\GeoIpCurrency 保持一致。
+         如需更严格防止 X-Forwarded-For 伪造，可追加 trustedProxies 参数
+         （如 ['127.0.0.1']），RemoteAddress 会从 IP 链中剔除可信代理 IP。
+         ======================================================================== -->
+    <virtualType name="OPRemoteAddress" type="Magento\Framework\HTTP\PhpEnvironment\RemoteAddress">
+        <arguments>
+            <argument name="alternativeHeaders" xsi:type="array">
+                <item name="x_forwarded_for" xsi:type="string">HTTP_X_FORWARDED_FOR</item>
+                <item name="x_real_ip" xsi:type="string">HTTP_X_REAL_IP</item>
+                <item name="cf_connecting_ip" xsi:type="string">HTTP_CF_CONNECTING_IP</item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <!-- 把带 alternativeHeaders 的 OPRemoteAddress 注入两个使用方，
+         使 CheckoutData（嵌入式 SDK.checkout 表单）与 CustomerBuilder（托管式 sendTrade）
+         的 billing_ip 及虚拟订单 GeoIP 查询都能拿到真实客户端 IP -->
+    <type name="Oceanpayment\Payment\Model\CheckoutData">
+        <arguments>
+            <argument name="remoteAddress" xsi:type="object">OPRemoteAddress</argument>
+        </arguments>
+    </type>
+
+    <type name="Oceanpayment\Payment\Gateway\Request\Builder\CustomerBuilder">
+        <arguments>
+            <argument name="remoteAddress" xsi:type="object">OPRemoteAddress</argument>
+        </arguments>
+    </type>
+
+    <!-- ========================================================================
          Section 1: Logger
          ======================================================================== -->
     <virtualType name="OPLogger" type="Magento\Payment\Model\Method\Logger">
