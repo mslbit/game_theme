@@ -95,11 +95,11 @@ class OrderBuilder implements BuilderInterface
             if ($item->getProductType() === 'configurable') {
                 continue;
             }
-
+          $price = $item->hasParentItem() ? $item->getParentItem()->getPrice() : $item->getPrice();
             $product = new Product();
             $product->setProductId($item->getProductId())
                 ->setName($this->sanitize((string) $item->getName()))
-                ->setPrice(number_format((float) $item->getRowTotal(), 2, '.', ''))
+                ->setPrice(number_format((float) $price, 2, '.', ''))
                 ->setQuantity((int) $item->getQtyOrdered())
                 ->setSku($this->sanitize((string) $item->getSku()))
                 ->setShippingProvider( 'other')
