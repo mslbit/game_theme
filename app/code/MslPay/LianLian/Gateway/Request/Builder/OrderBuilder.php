@@ -99,7 +99,7 @@ class OrderBuilder implements BuilderInterface
             $product = new Product();
             $product->setProductId($item->getProductId())
                 ->setName($this->sanitize((string) $item->getName()))
-                ->setPrice(number_format((float) $item->getRowTotal(), 2, '.', ''))
+                ->setPrice((string) $item->getRowTotal())
                 ->setQuantity((int) $item->getQtyOrdered())
                 ->setSku($this->sanitize((string) $item->getSku()))
                 ->setShippingProvider( 'other')
