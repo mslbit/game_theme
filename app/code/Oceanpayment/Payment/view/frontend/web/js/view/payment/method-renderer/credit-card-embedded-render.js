@@ -56,10 +56,12 @@ define([
                     var retryCount = 0;
                     var tryInit = function () {
                         if (typeof Oceanpayment !== 'undefined') {
+                            let EmbeddedConfiguration = {"showCardName": true};
                             Oceanpayment.init(
                                 embeddedConfig.is_sandbox || '',
                                 '',
-                                embeddedConfig.language || 'en_US'
+                                embeddedConfig.language || 'en_US',
+                                EmbeddedConfiguration
                             );
                         } else if (retryCount < 10) {
                             retryCount++;
