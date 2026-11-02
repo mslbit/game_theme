@@ -13,6 +13,10 @@
  */
 
 var config = {
+    deps: [
+        'Magento_Theme/js/slider-placeholder'
+    ],
+
     paths: {
         // 自定义模块路径别名（可选）
         // 'folixSlider': 'Magento_Theme/js/slider'

@@ -1,0 +1,54 @@
+// /**
+//  * Homepage - Banner Skeleton Placeholder
+//  * PageBuilder 背景图骨架占位：加载前显示电竞暗色扫光骨架，加载完成后淡出
+//  */
+
+& when (@media-common = true) {
+
+    // PageBuilder 背景图容器（slider 幻灯片、hero 海报等）
+    [data-background-images] {
+        position: relative;
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            pointer-events: none;
+            background: linear-gradient(110deg,
+                @folix-bg-page-base 30%,
+                @folix-bg-card 45%,
+                @folix-bg-page-base 60%);
+            background-size: 200% 100%;
+            animation: folix-shimmer 1.4s linear infinite;
+            transition: opacity .6s ease;
+        }
+
+        &.bg-loaded::before {
+            opacity: 0;
+            animation: none;
+        }
+    }
+
+    // CMS 裸 <img> 占位（feature 卡片图加载前预留方形空间）
+    .feature-card img {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+        background: @folix-bg-card;
+    }
+}
+
+@keyframes folix-shimmer {
+    0% {
+        background-position: 100% 0;
+    }
+
+    100% {
+        background-position: -100% 0;
+    }
+}
