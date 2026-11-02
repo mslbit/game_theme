@@ -1,0 +1,17 @@
+<?php
+/**
+ * Folix Game Theme - Banner Skeleton Critical CSS
+ *
+ * 内联输出 banner 骨架占位核心样式：HTML 一到达即渲染占位，
+ * 不等待 merged CSS（跨境下载慢）加载完成。
+ * 规则必须与 web/css/source/homepage/_slider-skeleton.less 保持一致。
+ */
+?>
+<style>
+[data-background-images]{position:relative}
+[data-background-images]::before{content:'';position:absolute;top:0;right:0;bottom:0;left:0;pointer-events:none;background:linear-gradient(110deg,rgba(100,116,139,.25) 30%,rgba(203,213,225,.55) 45%,rgba(100,116,139,.25) 60%);background-size:200% 100%;animation:folix-shimmer 1.4s linear infinite;transition:opacity .6s ease}
+[data-background-images].bg-loaded::before{opacity:0;animation:none}
+.feature-card img{background:rgba(100,116,139,.15)}
+.homepage-games-section .game-card .game-image{background:rgba(100,116,139,.15)}
+@keyframes folix-shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+</style>

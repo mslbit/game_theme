@@ -1,6 +1,11 @@
 // /**
 //  * Homepage - Banner Skeleton Placeholder
-//  * PageBuilder 背景图骨架占位：加载前显示电竞暗色扫光骨架，加载完成后淡出
+//  * PageBuilder 背景图骨架占位：加载前显示中性灰扫光骨架，加载完成后淡出
+//  *
+//  * 骨架色不用主题变量（曾因 light 主题 #F7F7F7/#FFF 在浅底上隐形）：
+//  * 改用半透明 slate 中性色——浅色底上呈浅灰蓝、深色底上呈暗蓝灰，双主题可见。
+//  * 同规则以精简形式内联于 Magento_Theme/templates/html/banner-skeleton.phtml，
+//  * 保证 merged CSS（跨境下载慢）到达前骨架即可渲染。
 //  */
 
 & when (@media-common = true) {
@@ -18,9 +23,9 @@
             left: 0;
             pointer-events: none;
             background: linear-gradient(110deg,
-                @folix-bg-page-base 30%,
-                @folix-bg-card 45%,
-                @folix-bg-page-base 60%);
+                rgba(100, 116, 139, .25) 30%,
+                rgba(203, 213, 225, .55) 45%,
+                rgba(100, 116, 139, .25) 60%);
             background-size: 200% 100%;
             animation: folix-shimmer 1.4s linear infinite;
             transition: opacity .6s ease;
@@ -39,7 +44,12 @@
         height: auto;
         aspect-ratio: 1 / 1;
         object-fit: cover;
-        background: @folix-bg-card;
+        background: rgba(100, 116, 139, .15);
+    }
+
+    // 首页游戏卡片图占位（图比例混杂不定 ratio，仅给底色）
+    .homepage-games-section .game-card .game-image {
+        background: rgba(100, 116, 139, .15);
     }
 }
 

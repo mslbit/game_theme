@@ -79,6 +79,11 @@
          </referenceBlock>
          
  
+         <!-- Banner 骨架占位内联样式：HTML 到达即显示，不等 merged CSS（注意：此 block 必须保持可缓存，勿加 cacheable="false"） -->
+        <referenceBlock name="head.additional">
+            <block class="Magento\Framework\View\Element\Template" name="folix.banner.skeleton" template="Magento_Theme::html/banner-skeleton.phtml"/>
+        </referenceBlock>
+
         <move element="navigation.sections" destination="folix.header.nav" />
            
        
