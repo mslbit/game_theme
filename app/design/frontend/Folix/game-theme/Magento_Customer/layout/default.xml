@@ -15,7 +15,7 @@
         </referenceBlock>
         
          <referenceBlock name="header.links">
-            <block class="Magento\Framework\View\Element\Template" name="customer-nocache" template="Magento_Customer::account/customer-nocache.phtml" before="-" cacheable="false"/>
+            <block class="Magento\Framework\View\Element\Template" name="customer-nocache" template="Magento_Customer::account/customer-nocache.phtml" before="-"/>
         </referenceBlock>
         <move element="customer" destination="customer-nocache" after="-" />
          <move element="header.links" destination="folix.top.right" after="-" />  
