@@ -9,6 +9,9 @@
  */
 ?>
 <style>
+div[data-content-type='slider']:not(.slick-initialized){visibility:visible}
+div[data-content-type='slider']:not(.slick-initialized)>[data-content-type='slide']{display:none}
+div[data-content-type='slider']:not(.slick-initialized)>[data-content-type='slide']:first-child{display:block}
 [data-background-images]{position:relative}
 [data-background-images]>img.folix-banner-img{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;object-fit:cover;background:linear-gradient(110deg,rgba(100,116,139,.25) 30%,rgba(203,213,225,.55) 45%,rgba(100,116,139,.25) 60%);background-size:200% 100%;animation:folix-shimmer 1.4s linear infinite}
 [data-background-images]>img.folix-banner-img.folix-banner-mobile{display:none}

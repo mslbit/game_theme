@@ -5,11 +5,29 @@
 //  * 样式随模块自包含：铺满布局、加载期骨架（骨架是 <img> 自身的
 //  * background——图片加载完成绘制位图时自然覆盖骨架背景，失败时
 //  * 骨架持续显示。单一元素无层级博弈，无 JS、无 class 切换）、
-//  * 双图响应式显隐。
+//  * 双图响应式显隐、slick 初始化前的首 slide 立即可见。
 //  * 经 styles-m/styles-l 的 @magento_import 'source/_module.less' 自动编译。
 //  */
 
 & when (@media-common = true) {
+
+    // 覆盖官方 FOUC 防护（slider/_default.less 的
+    // div[data-content-type='slider']{visibility:hidden}）：官方在 slick
+    // 初始化完成前隐藏整个轮播，跨境 JS 链慢时图片（已下载完）被长时间
+    // 扣住——改为初始化前仅显示第一个 slide（:not 计入特异性，稳赢官方规则）。
+    // 初始化后规则自动失效，slick 无缝接管；初始化前布局即最终布局，零跳动。
+    div[data-content-type='slider']:not(.slick-initialized) {
+        visibility: visible;
+
+        > [data-content-type='slide'] {
+            display: none;
+
+            &:first-child {
+                display: block;
+            }
+        }
+    }
+
     [data-background-images] {
         position: relative;
 
