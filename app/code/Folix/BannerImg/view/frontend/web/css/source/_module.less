@@ -1,0 +1,72 @@
+// /**
+//  * Folix BannerImg - Module Styles
+//  *
+//  * <img> 由本模块 Plugin/Filter/BannerImgPlugin 在服务端渲染插入，
+//  * 样式随模块自包含：铺满布局、加载期骨架（骨架是 <img> 自身的
+//  * background——图片加载完成绘制位图时自然覆盖骨架背景，失败时
+//  * 骨架持续显示。单一元素无层级博弈，无 JS、无 class 切换）、
+//  * 双图响应式显隐。
+//  * 经 styles-m/styles-l 的 @magento_import 'source/_module.less' 自动编译。
+//  */
+
+& when (@media-common = true) {
+    [data-background-images] {
+        position: relative;
+
+        // 服务端渲染出的 banner 图：绝对定位铺满容器，
+        // 骨架扫光作为自身背景（位图绘制后自然覆盖，无需淡出）
+        > img.folix-banner-img {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: linear-gradient(110deg,
+                rgba(100, 116, 139, .25) 30%,
+                rgba(203, 213, 225, .55) 45%,
+                rgba(100, 116, 139, .25) 60%);
+            background-size: 200% 100%;
+            animation: folix-shimmer 1.4s linear infinite;
+
+            // 双图响应式：移动图默认隐藏，768px 以下反转（对齐 PageBuilder 断点）
+            &.folix-banner-mobile {
+                display: none;
+            }
+        }
+
+        // overlay（slide 文字内容）保持最上层，relative 不脱离文档流
+        .pagebuilder-overlay {
+            position: relative;
+            z-index: 1;
+        }
+    }
+}
+
+//
+//  Mobile (style-m.css)
+//  _____________________________________________
+
+.media-width(@extremum, @break) when (@extremum = 'max') and (@break = @screen__m) {
+    [data-background-images] > img.folix-banner-img {
+        &.folix-banner-desktop {
+            display: none;
+        }
+
+        &.folix-banner-mobile {
+            display: block;
+        }
+    }
+}
+
+@keyframes folix-shimmer {
+    0% {
+        background-position: 100% 0;
+    }
+
+    100% {
+        background-position: -100% 0;
+    }
+}

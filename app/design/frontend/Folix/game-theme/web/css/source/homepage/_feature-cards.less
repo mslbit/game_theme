@@ -93,6 +93,16 @@
                     border-radius: 16px 16px 0 0;
                 }
 
+                // CMS 裸 <img> 占位（图加载前预留方形空间，背景兜底）
+                img {
+                    display: block;
+                    width: 100%;
+                    height: auto;
+                    aspect-ratio: 1 / 1;
+                    object-fit: cover;
+                    background: rgba(100, 116, 139, .15);
+                }
+
                 .feature-content {
                     background: linear-gradient(135deg, @folix-bg-panel 0%, @folix-bg-dark 100%);
                     padding: 20px;

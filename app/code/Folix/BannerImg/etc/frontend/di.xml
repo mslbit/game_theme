@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Folix BannerImg - 前台渲染插件
+ *
+ * 挂载于 Magento\Framework\Filter\Template::filter()（与 PageBuilder 官方的
+ * convertBackgroundImages 插件同一条过滤链），在服务端把 slide 背景图
+ * 数据渲染为真实 <img> 标签输出。
+ *
+ * 仅注册在 frontend area：后台 PageBuilder 编辑器（adminhtml）加载内容与
+ * 保存序列化均不经过本插件，DB 中保存的内容不受污染。
+ *
+ * 回滚方式：bin/magento module:disable Folix_BannerImg
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\Framework\Filter\Template">
+        <plugin name="folixBannerImgRender"
+                type="Folix\BannerImg\Plugin\Filter\BannerImgPlugin"/>
+    </type>
+</config>

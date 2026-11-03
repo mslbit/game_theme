@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Folix BannerImg - Banner Skeleton Critical CSS Layout
+ *
+ * 挂载内联 critical CSS 到 head.additional：HTML 一到达即渲染 banner
+ * 铺满与骨架样式，不等待 styles CSS（跨境下载慢）加载完成。
+ * 注意：此 block 必须保持可缓存，勿加 cacheable="false"（会废 FPC）。
+ */
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceBlock name="head.additional">
+            <block class="Magento\Framework\View\Element\Template"
+                   name="folix.banner.skeleton"
+                   template="Folix_BannerImg::banner-skeleton.phtml"/>
+        </referenceBlock>
+    </body>
+</page>

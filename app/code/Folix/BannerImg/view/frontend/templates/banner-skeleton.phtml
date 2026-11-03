@@ -1,0 +1,18 @@
+<?php
+/**
+ * Folix BannerImg - Banner Skeleton Critical CSS
+ *
+ * 内联输出 banner 铺满与骨架核心样式：HTML 一到达即渲染，
+ * 不等待 styles CSS（跨境下载慢）加载完成。
+ * 规则与 view/frontend/web/css/source/_module.less 保持一致。
+ * 骨架是 <img> 自身的 background：图片绘制后自然覆盖，无 JS、无 class 切换。
+ */
+?>
+<style>
+[data-background-images]{position:relative}
+[data-background-images]>img.folix-banner-img{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;object-fit:cover;background:linear-gradient(110deg,rgba(100,116,139,.25) 30%,rgba(203,213,225,.55) 45%,rgba(100,116,139,.25) 60%);background-size:200% 100%;animation:folix-shimmer 1.4s linear infinite}
+[data-background-images]>img.folix-banner-img.folix-banner-mobile{display:none}
+[data-background-images] .pagebuilder-overlay{position:relative;z-index:1}
+@keyframes folix-shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+@media only screen and (max-width:768px){[data-background-images]>img.folix-banner-img.folix-banner-desktop{display:none}[data-background-images]>img.folix-banner-img.folix-banner-mobile{display:block}}
+</style>
