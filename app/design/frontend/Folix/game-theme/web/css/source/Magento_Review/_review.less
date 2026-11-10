@@ -252,6 +252,124 @@
         }
 
         // ====================================================================
+        //  Folix Review List (topuplive style)
+        // ====================================================================
+
+        .folix-review-list {
+            margin-top: 20px;
+
+            .folix-review-list-title {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 16px;
+                padding-bottom: 12px;
+                border-bottom: 1px solid @folix-border;
+
+                strong {
+                    .lib-font-size(18);
+                    color: @folix-secondary; // 金色标题
+                    font-weight: 700;
+                }
+
+                .review-count {
+                    .lib-font-size(14);
+                    color: @folix-text-secondary;
+                }
+            }
+
+            .folix-review-list-content {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .folix-review-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 16px;
+                padding: 16px 20px;
+                background: @folix-opacity-white-3;
+                border: 1px solid @folix-border;
+                .lib-css(border-radius, @folix-radius-md);
+                transition: border-color 0.2s ease;
+
+                &:hover {
+                    border-color: @folix-opacity-white-20;
+                    background: @folix-opacity-white-5;
+                }
+
+                &:last-child {
+                    margin-bottom: 0;
+                }
+            }
+
+            .folix-review-main {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .folix-review-header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 8px;
+                flex-wrap: wrap;
+            }
+
+            .folix-review-author {
+                .lib-font-size(14);
+                font-weight: 600;
+                color: @folix-text-primary;
+            }
+
+            .folix-review-date {
+                .lib-font-size(12);
+                color: @folix-text-muted;
+            }
+
+            .folix-review-content {
+                .lib-font-size(13);
+                color: @folix-text-secondary;
+                line-height: 1.6;
+                word-break: break-word;
+            }
+
+            .folix-review-rating {
+                flex-shrink: 0;
+                padding-top: 4px;
+            }
+
+            .folix-stars {
+                display: flex;
+                align-items: center;
+                gap: 2px;
+
+                .folix-star {
+                    .lib-font-size(18);
+                    line-height: 1;
+                }
+
+                .folix-star-full {
+                    color: @folix-secondary; // 金色满星
+                }
+
+                .folix-star-half {
+                    color: @folix-secondary; // 金色半星
+                }
+
+                .folix-star-empty {
+                    color: @folix-opacity-white-10; // 灰色空星
+                }
+            }
+
+            .folix-review-toolbar {
+                margin-top: 16px;
+            }
+        }
+
+        // ====================================================================
         //  Review Form
         // ====================================================================
 
@@ -477,6 +595,133 @@
                 color: @folix-text-muted;
                 &:hover {
                     color: @folix-secondary;
+                }
+            }
+        }
+    }
+
+    // ========================================================================
+    //  Review Form Wrapper (folix-review-form-wrapper)
+    // ========================================================================
+
+    .folix-review-form-wrapper {
+        margin-top: 30px;
+        padding-top: 24px;
+        border-top: 1px solid @folix-border;
+
+        .block.review-add {
+            .block-title {
+                margin-bottom: 20px;
+
+                strong {
+                    .lib-font-size(18);
+                    color: @folix-text-primary;
+                    font-weight: 700;
+                }
+            }
+
+            .block-content {
+                background: @folix-bg-light;
+                border-radius: 8px;
+                padding: 24px;
+            }
+        }
+
+        // 评分字段样式
+        .review-field-ratings {
+            margin-bottom: 24px;
+
+            .legend {
+                .lib-font-size(14);
+                color: @folix-text-secondary;
+                font-weight: 600;
+                margin-bottom: 12px;
+            }
+
+            .review-field-rating {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 8px;
+
+                .label {
+                    min-width: 60px;
+                    .lib-font-size(14);
+                    color: @folix-text-primary;
+                    font-weight: 500;
+                }
+            }
+        }
+
+        // 文本字段样式
+        .review-field-nickname,
+        .review-field-summary,
+        .review-field-text {
+            margin-bottom: 16px;
+
+            .label {
+                display: block;
+                margin-bottom: 6px;
+                .lib-font-size(14);
+                color: @folix-text-secondary;
+                font-weight: 500;
+
+                span {
+                    color: @folix-text-primary;
+                }
+            }
+
+            .control {
+                input,
+                textarea {
+                    width: 100%;
+                    padding: 10px 12px;
+                    border: 1px solid @folix-border;
+                    border-radius: 6px;
+                    background: @color-white;
+                    .lib-font-size(14);
+                    color: @folix-text-primary;
+                    transition: border-color 0.2s ease;
+
+                    &:focus {
+                        border-color: @folix-secondary;
+                        outline: none;
+                        box-shadow: 0 0 0 2px fade(@folix-secondary, 20%);
+                    }
+                }
+
+                textarea {
+                    min-height: 120px;
+                    resize: vertical;
+                }
+            }
+        }
+
+        // 提交按钮
+        .review-form-actions {
+            margin-top: 20px;
+
+            .action.submit {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 12px 28px;
+                background: @folix-secondary;
+                color: @color-white;
+                border: none;
+                border-radius: 6px;
+                .lib-font-size(14);
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+
+                &:hover {
+                    background: @folix-secondary-dark;
+                    transform: translateY(-1px);
+                }
+
+                &:active {
+                    transform: translateY(0);
                 }
             }
         }

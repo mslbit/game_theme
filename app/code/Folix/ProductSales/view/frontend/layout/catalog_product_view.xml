@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Folix ProductSales - PDP 布局
+ *
+ * 深度定制：将成交量和评论组合在一个 Block 中，
+ * 使用 Flex 布局一行显示：[五星评分] [评论数] [成交量标签]
+ */
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <!-- 隐藏原生的评论 Block -->
+        <referenceBlock name="product.info.review" remove="true"/>
+        
+        <!-- 添加成交量 + 评论组合 Block 到 product.info.main 容器 -->
+        <referenceContainer name="product.info.main">
+            <block class="Folix\ProductSales\Block\SalesAndReview"
+                   name="folix.product.sales.review"
+                   template="Folix_ProductSales::sales-and-review.phtml"
+                   after="product.info.price"/>
+        </referenceContainer>
+        
+        <!-- 移动组合 Block 到 page.main.title 容器，紧跟在产品标题后面 -->
+        <move element="folix.product.sales.review" destination="page.main.title" after="page.main.title"/>
+    </body>
+</page>

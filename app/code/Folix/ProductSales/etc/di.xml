@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Folix_ProductSales - DI 配置
+ *
+ * 注册 CLI 命令：folix:sales:import
+ * 注册 Import 示例文件下载
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\Framework\Console\CommandListInterface">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="folix_sales_import" xsi:type="object">Folix\ProductSales\Console\Command\SalesImportCommand</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="Magento\ImportExport\Model\Import\SampleFileProvider">
+        <arguments>
+            <argument name="samples" xsi:type="array">
+                <item name="product_sales" xsi:type="string">Folix_ProductSales</item>
+            </argument>
+        </arguments>
+    </type>
+</config>

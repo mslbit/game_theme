@@ -1,0 +1,57 @@
+<?php
+/**
+ * Folix ProductSales - 成交量 + 评论组合模板
+ *
+ * Flex 布局一行显示：
+ * [五星评分] [评论数] [成交量标签]
+ *
+ * @var $block \Folix\ProductSales\Block\SalesAndReview
+ */
+?>
+<?php
+$starRating = $block->getStarRating();
+$reviewsCount = $block->getReviewsCount();
+$hasSales = $block->hasSalesData();
+$formattedVolume = $block->getFormattedVolume();
+$reviewsUrl = $block->getReviewsUrl();
+
+// 如果既没有评论也没有成交量，不显示
+if (!$reviewsCount && !$hasSales) {
+    return;
+}
+
+// 计算五星显示（支持半星）
+$fullStars = floor($starRating);
+$halfStar = ($starRating - $fullStars) >= 0.5 ? 1 : 0;
+$emptyStars = 5 - $fullStars - $halfStar;
+?>
+<div class="folix-sales-review-wrapper">
+    <?php if ($reviewsCount > 0): ?>
+    <!-- 五星评分 + 评论数 -->
+    <div class="folix-review-section">
+        <div class="folix-stars" title="<?= $escaper->escapeHtmlAttr($starRating . ' / 5') ?>">
+            <?php for ($i = 0; $i < $fullStars; $i++): ?>
+                <span class="folix-star folix-star-full">★</span>
+            <?php endfor; ?>
+            <?php if ($halfStar): ?>
+                <span class="folix-star folix-star-half">★</span>
+            <?php endif; ?>
+            <?php for ($i = 0; $i < $emptyStars; $i++): ?>
+                <span class="folix-star folix-star-empty">★</span>
+            <?php endfor; ?>
+        </div>
+        <a href="<?= $escaper->escapeUrl($reviewsUrl) ?>" class="folix-reviews-count">
+            <?= $escaper->escapeHtml($reviewsCount) ?>
+            <span><?= $reviewsCount == 1 ? __('Review') : __('Reviews') ?></span>
+        </a>
+    </div>
+    <?php endif; ?>
+
+    <?php if ($hasSales): ?>
+    <!-- 成交量标签 -->
+    <div class="folix-sales-section">
+        <span class="folix-sales-badge"><?= $escaper->escapeHtml($formattedVolume) ?></span>
+        <span class="folix-sales-label">sold</span>
+    </div>
+    <?php endif; ?>
+</div>

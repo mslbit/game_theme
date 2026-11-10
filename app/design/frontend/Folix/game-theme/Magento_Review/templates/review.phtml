@@ -1,0 +1,26 @@
+<?php
+/**
+ * Folix Game Theme - Reviews Tab Container
+ * 
+ * 覆盖 vendor/magento/module-review/view/frontend/templates/review.phtml
+ * 参考 topuplive.com 设计：评论列表在上，表单在下
+ *
+ * @var \Magento\Review\Block\Product\Review $block
+ */
+?>
+<div id="product-review-container" data-role="product-review"></div>
+
+<div class="folix-review-form-wrapper">
+    <?= $block->getChildHtml() ?>
+</div>
+
+<script type="text/x-magento-init">
+    {
+        "*": {
+            "Magento_Review/js/process-reviews": {
+                "productReviewUrl": "<?= $block->escapeJs($block->getProductReviewUrl()) ?>",
+                "reviewsTabSelector": "#tab-label-reviews"
+            }
+        }
+    }
+</script>

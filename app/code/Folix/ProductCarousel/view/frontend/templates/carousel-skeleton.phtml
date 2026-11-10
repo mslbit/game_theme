@@ -1,0 +1,17 @@
+<?php
+/**
+ * Folix ProductCarousel - Carousel Skeleton Critical CSS
+ *
+ * 内联输出产品轮播 FOUC 防护 + 骨架屏核心样式：HTML 一到达即渲染，
+ * 不等待 styles CSS（跨境下载慢）加载完成。
+ * 规则与 view/frontend/web/css/source/_module.less 保持一致。
+ * 骨架是容器的 ::after 伪元素背景：图片绘制后自然覆盖，无 JS、无 class 切换。
+ */
+?>
+<style>
+[data-content-type="products"][data-appearance="carousel"]:not(.slick-initialized){visibility:visible}
+[data-content-type="products"][data-appearance="carousel"]:not(.slick-initialized) .product-item{display:none}
+[data-content-type="products"][data-appearance="carousel"]:not(.slick-initialized) .product-item:first-child{display:block}
+img.folix-product-skeleton{background:linear-gradient(110deg,rgba(100,116,139,.25) 30%,rgba(203,213,225,.55) 45%,rgba(100,116,139,.25) 60%);background-size:200% 100%;animation:folix-product-shimmer 1.4s linear infinite}
+@keyframes folix-product-shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+</style>

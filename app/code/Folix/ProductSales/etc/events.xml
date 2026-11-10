@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Folix_ProductSales - 事件监听配置
+ *
+ * 监听 checkout_submit_all_after：订单完全提交后自动累加成交量。
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
+    <event name="checkout_submit_all_after">
+        <observer name="folix_product_sales_increment"
+                  instance="Folix\ProductSales\Observer\SalesObserver"/>
+    </event>
+</config>

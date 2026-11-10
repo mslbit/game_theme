@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Folix_ReviewImport - DI 配置
+ *
+ * 注册 Import 示例文件下载
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\ImportExport\Model\Import\SampleFileProvider">
+        <arguments>
+            <argument name="samples" xsi:type="array">
+                <item name="review" xsi:type="string">Folix_ReviewImport</item>
+            </argument>
+        </arguments>
+    </type>
+</config>

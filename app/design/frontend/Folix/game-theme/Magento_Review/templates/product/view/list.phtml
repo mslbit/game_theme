@@ -1,116 +1,95 @@
 <?php
 /**
- * Folix game-theme: Product review list with rating summary.
+ * Folix Game Theme - 评论列表模板
+ *
+ * 参考 topuplive.com 设计：
+ * - 深色背景
+ * - 用户邮箱（脱敏）+ 国旗图标
+ * - 日期时间
+ * - 评论内容
+ * - 右侧显示星级评分
+ *
+ * @var ListView $block
+ * @var SecureHtmlRenderer $secureRenderer
+ * @var Escaper $escaper
  */
 
 use Magento\Framework\Escaper;
 use Magento\Framework\View\Helper\SecureHtmlRenderer;
 use Magento\Review\Block\Product\View\ListView;
 
-/**
- * @var ListView $block
- * @var SecureHtmlRenderer $secureRenderer
- * @var Escaper $escaper
- */
-
 $_items = $block->getReviewsCollection()->getItems();
 $format = $block->getDateFormat() ?: \IntlDateFormatter::SHORT;
-$productId = $block->getProductId();
-
-/** @var \Folix\Review\ViewModel\RatingDistribution|null $distViewModel */
-$distViewModel = $block->getData('rating_distribution_view_model');
-if ($distViewModel) {
-    $distribution = $distViewModel->getDistribution($productId);
-    $total = $distribution['total'];
-    $average = $distViewModel->getAverage($productId);
-}
-
-if (!count($_items) && (!$distViewModel || $total === 0)):
-    return;
-endif;
 ?>
-<div class="pdp-review-wrapper">
-    <?php if ($distViewModel && $total > 0): ?>
-    <div class="pdp-review-summary">
-        <div class="pdp-review-average">
-            <div class="pdp-review-score"><?= $escaper->escapeHtml($average) ?></div>
-            <div class="pdp-review-outof"><?= $escaper->escapeHtml(__('out of 5')) ?></div>
-            <div class="pdp-review-stars">
-                <div class="rating-result"
-                     title="<?= $escaper->escapeHtmlAttr($average * 20) ?>%">
-                    <span style="width:<?= $escaper->escapeHtmlAttr($average * 20) ?>%">
-                        <span><?= $escaper->escapeHtml($average) ?></span>
-                    </span>
-                </div>
+<?php if (count($_items)): ?>
+    <div class="folix-review-list" id="customer-reviews">
+        <?php if (!$block->getHideTitle()): ?>
+            <div class="folix-review-list-title">
+                <strong><?= $escaper->escapeHtml(__('Reviews')) ?></strong>
+                <span class="review-count">(<?= count($_items) ?>)</span>
             </div>
-            <div class="pdp-review-total">
-                <?= $escaper->escapeHtml(__('%1 reviews', (int) $total)) ?>
-            </div>
-        </div>
-        <div class="pdp-review-bars">
-            <?php for ($star = 5; $star >= 1; $star--): ?>
-            <div class="pdp-review-bar-row">
-                <span class="pdp-review-bar-label"><?= $escaper->escapeHtml($star) ?> ★</span>
-                <div class="pdp-review-bar-track">
-                    <div class="pdp-review-bar-fill" style="width:<?= $escaper->escapeHtmlAttr($distribution[$star]['percent']) ?>%"></div>
-                </div>
-                <span class="pdp-review-bar-count"><?= $escaper->escapeHtml($distribution[$star]['count']) ?></span>
-            </div>
-            <?php endfor; ?>
-        </div>
-    </div>
-    <?php endif; ?>
+        <?php endif ?>
 
-    <?php if (count($_items)): ?>
-    <div class="block review-list" id="customer-reviews">
-        <div class="block-title">
-            <strong><?= $escaper->escapeHtml(__('Customer Reviews')) ?></strong>
-        </div>
-        <div class="block-content">
-            <div class="toolbar review-toolbar">
-                <?= $block->getChildHtml('toolbar') ?>
-            </div>
-            <ol class="items review-items">
-                <?php foreach ($_items as $_review): ?>
-                    <li class="item review-item" itemscope itemprop="review" itemtype="http://schema.org/Review">
-                        <div class="review-item-rating">
+        <div class="folix-review-list-content">
+            <?php foreach ($_items as $_review): ?>
+                <div class="folix-review-item" itemscope itemprop="review" itemtype="http://schema.org/Review">
+                    <!-- 左侧：用户信息 + 评论内容 -->
+                    <div class="folix-review-main">
+                        <!-- 用户信息行 -->
+                        <div class="folix-review-header">
+                            <span class="folix-review-author" itemprop="author">
+                                <?= $escaper->escapeHtml($_review->getNickname()) ?>
+                            </span>
+                            <time class="folix-review-date" itemprop="datePublished"
+                                  datetime="<?= $escaper->escapeHtmlAttr($block->formatDate($_review->getCreatedAt(), $format)) ?>">
+                                <?= $escaper->escapeHtml($block->formatDate($_review->getCreatedAt(), $format)) ?>
+                            </time>
+                        </div>
+
+                        <!-- 评论内容 -->
+                        <div class="folix-review-content" itemprop="description">
+                            <?= /* @noEscape */ nl2br($escaper->escapeHtml($_review->getDetail())) ?>
+                        </div>
+                    </div>
+
+                    <!-- 右侧：星级评分 -->
+                    <?php if (count($_review->getRatingVotes())): ?>
+                        <div class="folix-review-rating">
                             <?php
-                            $_votes = $_review->getRatingVotes();
-                            if ($_votes && $_votes->getSize()):
-                                $_firstVote = $_votes->getFirstItem();
+                            // 计算平均星级
+                            $totalPercent = 0;
+                            $voteCount = 0;
+                            foreach ($_review->getRatingVotes() as $_vote) {
+                                $totalPercent += $_vote->getPercent();
+                                $voteCount++;
+                            }
+                            $avgPercent = $voteCount > 0 ? $totalPercent / $voteCount : 0;
+                            $starRating = round($avgPercent / 20, 1); // 转换为 1-5 星
+                            $fullStars = floor($starRating);
+                            $halfStar = ($starRating - $fullStars) >= 0.5 ? 1 : 0;
+                            $emptyStars = 5 - $fullStars - $halfStar;
                             ?>
-                                <div class="rating-result"
-                                     title="<?= $escaper->escapeHtmlAttr($_firstVote->getPercent()) ?>%">
-                                    <span style="width:<?= $escaper->escapeHtmlAttr($_firstVote->getPercent()) ?>%;">
-                                        <span><?= $escaper->escapeHtmlAttr($_firstVote->getPercent()) ?>%</span>
-                                    </span>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                        <div class="review-item-content">
-                            <div class="review-title" itemprop="name">
-                                <?= $escaper->escapeHtml($_review->getTitle()) ?>
-                            </div>
-                            <div class="review-content" itemprop="description">
-                                <?= /* @noEscape */ nl2br($escaper->escapeHtml($_review->getDetail())) ?>
-                            </div>
-                            <div class="review-details">
-                                <span class="review-author" itemprop="author">
-                                    <?= $escaper->escapeHtml($_review->getNickname()) ?>
-                                </span>
-                                <time class="review-date" itemprop="datePublished"
-                                      datetime="<?= $escaper->escapeHtmlAttr($block->formatDate($_review->getCreatedAt(), $format)) ?>">
-                                    <?= $escaper->escapeHtml($block->formatDate($_review->getCreatedAt(), $format)) ?>
-                                </time>
+                            <div class="folix-stars" title="<?= $escaper->escapeHtmlAttr($starRating . ' / 5') ?>">
+                                <?php for ($i = 0; $i < $fullStars; $i++): ?>
+                                    <span class="folix-star folix-star-full">★</span>
+                                <?php endfor; ?>
+                                <?php if ($halfStar): ?>
+                                    <span class="folix-star folix-star-half">★</span>
+                                <?php endif; ?>
+                                <?php for ($i = 0; $i < $emptyStars; $i++): ?>
+                                    <span class="folix-star folix-star-empty">★</span>
+                                <?php endfor; ?>
                             </div>
                         </div>
-                    </li>
-                <?php endforeach; ?>
-            </ol>
-            <div class="toolbar review-toolbar">
-                <?= $block->getChildHtml('toolbar') ?>
-            </div>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
         </div>
+
+        <?php if ($block->getPagerHtml()): ?>
+            <div class="folix-review-toolbar">
+                <?= $block->getPagerHtml() ?>
+            </div>
+        <?php endif; ?>
     </div>
-    <?php endif; ?>
-</div>
+<?php endif; ?>

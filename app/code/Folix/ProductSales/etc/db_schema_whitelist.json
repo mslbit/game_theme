@@ -1,0 +1,15 @@
+{
+    "folix_product_sales": {
+        "column": {
+            "entity_id": true,
+            "product_id": true,
+            "display_volume": true,
+            "updated_at": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "FOLIX_PRODUCT_SALES_PRODUCT_ID_UNIQUE": true,
+            "FOLIX_PRODUCT_SALES_PRODUCT_ID_FK": true
+        }
+    }
+}

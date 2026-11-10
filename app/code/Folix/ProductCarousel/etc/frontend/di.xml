@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Folix_ProductCarousel - 前台渲染插件
+ *
+ * 挂载于 Magento\CatalogWidget\Block\Product\ProductsList::toHtml()，
+ * 在服务端把产品轮播的图片优化为原生 lazy loading + 骨架屏。
+ *
+ * 仅注册在 frontend area：后台不受影响。
+ *
+ * 回滚方式：bin/magento module:disable Folix_ProductCarousel
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\CatalogWidget\Block\Product\ProductsList">
+        <plugin name="folixProductCarouselOptimize"
+                type="Folix\ProductCarousel\Plugin\ProductsListPlugin"
+                sortOrder="10"/>
+    </type>
+</config>

@@ -1,0 +1,48 @@
+// /**
+//  * Folix ProductCarousel - Module Styles
+//  *
+//  * 产品轮播优化样式：骨架屏 shimmer 动画、FOUC 防护。
+//  * <img> 由本模块 Plugin/ProductsListPlugin 在服务端优化（原生 lazy loading），
+//  * 骨架是容器的 ::after 伪元素背景——图片加载完成后自然覆盖骨架，
+//  * 加载失败时骨架持续显示。单一伪元素无层级博弈，无 JS、无 class 切换。
+//  * 经 styles-m/styles-l 的 @magento_import 'source/_module.less' 自动编译。
+//  */
+
+& when (@media-common = true) {
+
+    // FOUC 防护：slick 初始化前显示第一个产品
+    // 覆盖 PageBuilder 默认的 visibility:hidden（products/_default.less）
+    [data-content-type="products"][data-appearance="carousel"]:not(.slick-initialized) {
+        visibility: visible;
+
+        .product-item {
+            display: none;
+
+            &:first-child {
+                display: block;
+            }
+        }
+    }
+
+    // 骨架屏：图片自身的 shimmer 背景
+    // 与 BannerImg 一致：骨架是 <img> 的 background，
+    // 位图绘制后自然覆盖，失败时骨架持续显示。单一元素无层级博弈。
+    img.folix-product-skeleton {
+        background: linear-gradient(110deg,
+            rgba(100, 116, 139, .25) 30%,
+            rgba(203, 213, 225, .55) 45%,
+            rgba(100, 116, 139, .25) 60%);
+        background-size: 200% 100%;
+        animation: folix-product-shimmer 1.4s linear infinite;
+    }
+}
+
+@keyframes folix-product-shimmer {
+    0% {
+        background-position: 100% 0;
+    }
+
+    100% {
+        background-position: -100% 0;
+    }
+}

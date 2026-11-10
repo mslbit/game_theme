@@ -1,0 +1,16 @@
+<?php
+/**
+ * Folix ProductSales - PDP 成交量显示模板
+ *
+ * 参考 topuplive.com UI：金色标签 + 格式化数字 + "sold" 后缀
+ * 仅在配置了成交量的产品上显示。
+ *
+ * @var $block \Folix\ProductSales\Block\SalesVolume
+ */
+?>
+<?php if ($block->hasSalesData()): ?>
+    <div class="folix-sales-volume">
+        <span class="folix-sales-badge"><?= $escaper->escapeHtml($block->getFormattedVolume()) ?></span>
+        <span class="folix-sales-label">sold</span>
+    </div>
+<?php endif; ?>

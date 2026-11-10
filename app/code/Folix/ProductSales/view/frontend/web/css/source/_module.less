@@ -1,0 +1,117 @@
+// /**
+//  * Folix ProductSales - PDP 成交量 + 评论组合样式
+//  *
+//  * Flex 布局一行显示：[五星评分] [评论数] [成交量标签]
+//  * 参考 topuplive.com UI
+//  * 经 styles-m/styles-l 的 @magento_import 'source/_module.less' 自动编译。
+//  */
+
+& when (@media-common = true) {
+
+    // 成交量 + 评论组合容器
+    .folix-sales-review-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+    }
+
+    // 评论区域（五星 + 评论数）
+    .folix-review-section {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .folix-stars {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+
+            .folix-star {
+                font-size: 16px;
+                line-height: 1;
+            }
+
+            .folix-star-full {
+                color: #F59E0B; // 金色满星
+            }
+
+            .folix-star-half {
+                color: #F59E0B; // 金色半星（可用 CSS 遮罩实现真正半星）
+                position: relative;
+            }
+
+            .folix-star-empty {
+                color: #D1D5DB; // 灰色空星
+            }
+        }
+
+        .folix-reviews-count {
+            font-size: 14px;
+            color: #64748B;
+            text-decoration: none;
+            font-weight: 500;
+
+            &:hover {
+                color: #F59E0B;
+                text-decoration: underline;
+            }
+
+            span {
+                margin-left: 2px;
+            }
+        }
+    }
+
+    // 成交量区域（金色标签 + sold）
+    .folix-sales-section {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        .folix-sales-badge {
+            display: inline-flex;
+            align-items: center;
+            background: #F59E0B;
+            color: #1a1a2e;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.3px;
+        }
+
+        .folix-sales-label {
+            font-size: 14px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+    }
+
+    // 保留旧样式（向后兼容）
+    .folix-sales-volume {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+
+        .folix-sales-badge {
+            display: inline-flex;
+            align-items: center;
+            background: #F59E0B;
+            color: #1a1a2e;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.3px;
+        }
+
+        .folix-sales-label {
+            font-size: 14px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+    }
+}
